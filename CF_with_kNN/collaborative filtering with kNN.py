@@ -1,258 +1,243 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Nov 12 13:16:09 2020
+Created on Sun Nov 15 20:29:58 2020
 
 @author: user
 """
 
-#%%
-import load_data
-import similarity_methods
-import sigmoid_mapping
 
-from scipy.sparse import csr_matrix
+from load_data import load_data
+from similarity_measure import similarity_methods, sigmoid_mapping
 from tqdm import tqdm
 import numpy as np
 import random
+import pickle
 
-#%%
 
 # 1. data load
-rating_matrix = load_data.create_rating()
+rd = load_data.user_item_dictionary()
 
-# np.mean(rating_matrix ['rating']) # 3.50
-# np.median(rating_matrix ['rating']) # 3.5
-# np.mean(list(Counter(rating_matrix ['userId']).values())) # 평균 165개의 rating을 하였음.
-# np.min(list(Counter(rating_matrix ['userId']).values())) # 최솟값 20개
-# np.max(list(Counter(rating_matrix ['userId']).values())) # 최댓값 2698개
 
-#%%
+# 2. train/test split
+def train_test_split(data, test_ratio = 0.2, random_state = 92): # data: movie lens dataset
+    print('split dataset')    
+    train_set = {}
+    test_set = {}
+    
+    for user in data:
+        
+        item_rate = list(data[user].items())
+        random.Random(random_state).shuffle(item_rate)
+        length = len(item_rate)
+        cri = int(length * (1-0.2))
+        
+        train_set[user] = {i:r for i,r in item_rate[:cri]}
+        test_set[user] = {i:r for i,r in item_rate[cri:]}
+    
+    return train_set, test_set
 
-# 2. split train / test set 
+train, test = train_test_split(data=rd, test_ratio = 0.2)
 
-def train_test_split(data, test_ratio = 0.2): # data: movie lens dataset,
 
-    train_user_idx = [] # train row
-    train_item_idx = [] # train columns
-    train_rating_idx = [] # train ratings
-    test_user_idx = [] # test row
-    test_item_idx = [] # test columns
-    test_rating_idx = [] # test ratings
+
+
+def similarity_calculation(data, measure = 'cosine'):
+    print('similarity calculation')
+    
+    user_id = list(data.keys())
+    sim_dic = {}
+    idx = 0
+    
+    if measure == 'cosine':
+        sim_measure = similarity_methods.cosine_similarity
+        idx+=1
+    elif measure == 'pcc':
+        sim_measure = similarity_methods.PCC_similarity
+        idx+=1
+    elif measure == 'msd':
+        sim_measure = similarity_methods.MSD_similarity
+        idx+=1
+    elif measure == 'jaccard':
+        sim_measure = similarity_methods.Jaccard_similarity
+        idx+=2
+    elif measure == 'sigmoid':
+        sim_measure = sigmoid_mapping.sigmoid_mapping_similarity
+        idx+=3
     
     
-    user_length = len(set(data['userId'])) # length of users
-    for i in range(1,user_length+1):
-        
-        sub = rating_matrix[data['userId']==i]
-        index = list(sub.index)
-        random.shuffle(index)    
-        cutting = int(len(index)*test_ratio)
-        
-        train_idx = index[cutting:] # train index of subset
-        test_idx = index[:cutting]  # test index of subset
-        
-        train_user_idx.extend(np.repeat(i,len(train_idx)))
-        train_item_idx.extend(sub.loc[train_idx, 'movieId'])
-        train_rating_idx.extend(sub.loc[train_idx, 'rating'])
-        
-        test_user_idx.extend(np.repeat(i,len(test_idx)))
-        test_item_idx.extend(sub.loc[test_idx, 'movieId'])
-        test_rating_idx.extend(sub.loc[test_idx, 'rating'])
-        
-    
-    if len(train_user_idx) == len(train_item_idx):
-        train_csr = csr_matrix((train_rating_idx, (train_user_idx, train_item_idx)))
-    
-    if len(test_user_idx) == len(test_item_idx):
-        test_csr = csr_matrix((test_rating_idx, (test_user_idx, test_item_idx)))
-
-    return train_csr, test_csr
-
-train_csr_matrix, test_csr_matrix = train_test_split(rating_matrix, test_ratio = 0.2)
-
-
-#%%
-
-# 3. similarity calculation
-
-
-
-
-length = list(range(1, train_csr_matrix.shape[0])) # user length
-
-
-similarity_measure = 'cosine_similarity'
-if similarity_measure == 'cosine_similarity':
-    
-    cos_sim_dic = {}
-    
-    for i in tqdm(length): # active users loop
-        
-        cos_sim_dic[i] = {}
-    
-        neighbor_ = length.copy()
-        neighbor_.remove(i)
-        
-        for j in neighbor_: # neighbor except for active user
-            active_user_item = set(train_csr_matrix[i,:].indices) # active user's ratings
-            co_rated = list(active_user_item.intersection(set(train_csr_matrix[j,:].indices))) # co-rated rating
-            active = train_csr_matrix[i,co_rated].data # active user's ratings in co-rated
-            neighbor = train_csr_matrix[j,co_rated].data # neighbor user's ratings in co-rated
+    if idx == 1: # For cosine, pcc, msd 
+        for user in tqdm(user_id):
             
-            sim = similarity_methods.cosine_similarity(active, neighbor)
+            sim_dic[user] = {}
             
-            cos_sim_dic[i][j] = [sim,len(co_rated),j] # similarity, count co-rated, neighbor
-
-
-
-similarity_measure =  'PCC_similarity'
-if similarity_measure == 'PCC_similarity':
-    
-    pcc_sim_dic = {}
-    
-    for i in tqdm(length): # active users loop
+            tmp = user_id.copy()
+            tmp.remove(user)
+            neighbors = tmp # active user removed.
+            
+            for neighbor in neighbors:
+                
+                corated = set(data[user].keys()).intersection(set(data[neighbor].keys()))
+                
+                ui = []
+                uj = []
+                
+                for c in corated:
+                    
+                    ui.append(data[user][c])
+                    uj.append(data[neighbor][c])
+                
+                sim_dic[user][neighbor] = (sim_measure(ui, uj), len(corated))
         
-        pcc_sim_dic[i] = {}
+        return sim_dic
     
-        neighbor_ = length.copy()
-        neighbor_.remove(i)
+    
+    if idx == 2: # For jaccard
+        for user in tqdm(user_id):
+            
+            sim_dic[user] = {}
+            
+            tmp = user_id.copy()
+            tmp.remove(user)
+            neighbors = tmp # active user removed.
+            
+            for neighbor in neighbors:
+                
+                ui = data[user].keys()
+                uj = data[neighbor].keys()
+                
+                corated = set(ui).intersection(set(uj))
+                
+                sim_dic[user][neighbor] = (sim_measure(ui,uj), len(corated))
         
-        for j in neighbor_: # neighbor except for active user
-            active_user_item = set(train_csr_matrix[i,:].indices) # active user's ratings
-            co_rated = list(active_user_item.intersection(set(train_csr_matrix[j,:].indices))) # co-rated rating
-            active = train_csr_matrix[i,co_rated].data # active user's ratings in co-rated
-            neighbor = train_csr_matrix[j,co_rated].data # neighbor user's ratings in co-rated
-            
-            sim = similarity_methods.PCC_similarity(active, neighbor)
-            
-            pcc_sim_dic[i][j] = [sim,len(co_rated),j] # similarity, count co-rated, neighbor            
- 
- 
- 
- 
-similarity_measure =  'MSD_similarity'
-if similarity_measure == 'MSD_similarity':
+        return sim_dic
     
-    msd_sim_dic = {}
     
-    for i in tqdm(length): # active users loop
+    if idx == 3: # For sigmoid
         
-        msd_sim_dic[i] = {}
-    
-        neighbor_ = length.copy()
-        neighbor_.remove(i)
+        sigmoid_dic = sigmoid_mapping.sigmoid_mapping_d()
         
-        for j in neighbor_: # neighbor except for active user
-            active_user_item = set(train_csr_matrix[i,:].indices) # active user's ratings
-            co_rated = list(active_user_item.intersection(set(train_csr_matrix[j,:].indices))) # co-rated rating
-            active = train_csr_matrix[i,co_rated].data # active user's ratings in co-rated
-            neighbor = train_csr_matrix[j,co_rated].data # neighbor user's ratings in co-rated
+        for user in tqdm(user_id):
             
-            sim = similarity_methods.MSD_similarity(active, neighbor)
+            sim_dic[user] = {}
             
-            msd_sim_dic[i][j] = [sim,len(co_rated),j] # similarity, count co-rated, neighbor 
-
-
-
-
-similarity_measure =  'Jaccard_similarity'
-if similarity_measure == 'Jaccard_similarity':
-    
-    jac_sim_dic = {}
-    
-    for i in tqdm(length): # active users loop
+            tmp = user_id.copy()
+            tmp.remove(user)
+            neighbors = tmp # active user removed.
+            
+            for neighbor in neighbors:
+                
+                corated = set(data[user].keys()).intersection(set(data[neighbor].keys()))
+                
+                ui = []
+                uj = []
+                
+                for c in corated:
+                    
+                    ui.append(data[user][c])
+                    uj.append(data[neighbor][c])
+                
+                sim_dic[user][neighbor] = (sim_measure(ui, uj, sigmoid_dic = sigmoid_dic), len(corated))
         
-        jac_sim_dic[i] = {}
-    
-        neighbor_ = length.copy()
-        neighbor_.remove(i)
-        
-        for j in neighbor_: # neighbor except for active user
-            active_user_item = set(train_csr_matrix[i,:].indices) # active user's ratings
-            co_rated = list(active_user_item.intersection(set(train_csr_matrix[j,:].indices))) # co-rated rating
-            active = train_csr_matrix[i,co_rated].data # active user's ratings in co-rated
-            neighbor = train_csr_matrix[j,co_rated].data # neighbor user's ratings in co-rated
-            
-            sim = similarity_methods.Jaccard_similarity(train_csr_matrix[i,:].indices, 
-                                               train_csr_matrix[j,:].indices)
-            
-            jac_sim_dic[i][j] = [sim,len(co_rated),j] # similarity, count co-rated, neighbor 
+        return sim_dic
 
 
 
 
 
+# uses similarity calculation
+cosine_sim = similarity_calculation(train, 'cosine')
+pcc_sim = similarity_calculation(train,'pcc')
+msd_sim = similarity_calculation(train,'msd')
+jaccard_sim = similarity_calculation(train,'jaccard')
+sigmoid_sim = similarity_calculation(train,'sigmoid')
 
-similarity_measure =  'sigmoid_mapping_similarity'   
-if similarity_measure == 'sigmoid_mapping_similarity':
-    
-    sigmoid_dic = sigmoid_mapping.sigmoid_mapping_d()
-    
-    sig_sim_dic = {}
-    
-    for i in tqdm(length): # active users loop
-        
-        sig_sim_dic[i] = {}
-    
-        neighbor_ = length.copy()
-        neighbor_.remove(i)
-        
-        for j in neighbor_: # neighbor except for active user
-            active_user_item = set(train_csr_matrix[i,:].indices) # active user's ratings
-            co_rated = list(active_user_item.intersection(set(train_csr_matrix[j,:].indices))) # co-rated rating
-            active = train_csr_matrix[i,co_rated].data # active user's ratings in co-rated
-            neighbor = train_csr_matrix[j,co_rated].data # neighbor user's ratings in co-rated
-            
-            sim = sigmoid_mapping.sigmoid_mapping_similarity(active, neighbor, 
-                                                     sigmoid_dic = sigmoid_dic)
-            
-            sig_sim_dic[i][j] = [sim,len(co_rated),j] # similarity, count co-rated, neighbor 
-            
-            
-    
-#%%
-# make simliarity matrics to pickle   
-import pickle 
-dics = [cos_sim_dic, pcc_sim_dic, msd_sim_dic, jac_sim_dic, sig_sim_dic]
+
+# make simliarity matrics to pickle file
+dics = [cosine_sim, pcc_sim, msd_sim, jaccard_sim, sigmoid_sim]
 dics_n = ['cos_sim_dic', 'pcc_sim_dic', 'msd_sim_dic', 'jac_sim_dic', 'sig_sim_dic']
 
-for i,n in zip(dics, dics_n):
-    with open('%s.pickle'.format(n), 'wb') as f:
-        pickle.dump(i, f)
-    
 
-#%%
 
-def user_item_dictionary(data):
+def predict_with_knn(data, sim_metric=cosine_sim, k=10):
+    print('predict')
     
-    rating_dic = {}
+    k=7
+    rating = load_data.create_rating()
+    items = set(rating['movieId'])
     
-    for user in set(rating_matrix['userId']):
+    avg_d = {user:np.mean(list(data[user].values())) for user in data}
+    predict_d = {}
+    users = data.keys()
+    
+    for ui in tqdm((users), position=0, leave=True):
         
-        rating_dic[user] = {}
-        it = rating_matrix[rating_matrix['userId']==user][['movieId','rating']]
+        unrated = items.difference(set(data[ui].keys()))
+        active_item_dic = {}
+        active_item_dic[ui] = {}
+        predict_d[ui] = {}
         
-        for item, rating in zip(it['movieId'], it['rating']):
+        #1. find 'active item' rated by 'nearest neighbor'    
+        for active_item in unrated:
+            active_item_dic[ui][active_item]=[]
             
-            rating_dic[user][item] = rating
-    return rating_dic
+            for neighbor in users:
+                if active_item in data[neighbor].keys(): # neighbor 중에서 unrated active item을 갖고 있다면,
+                    active_item_dic[ui][active_item].append(sim_metric[ui][neighbor] + (data[neighbor][active_item],)) # similarity, number of co-rated, rating        
+        
+        #2. create predict value
+            predict_d[ui][active_item] = 0
             
-rd = user_item_dictionary(rating_matrix)
-len(rd)
+            k_near_neighbor = sorted(active_item_dic[ui][active_item], key=lambda x: (x[0],[1]), reverse=True)[:k]
+            
+            up = 0
+            down = 0
+            
+            for i in k_near_neighbor:
+                up += (i[0]*i[2])
+                down += i[0]
+            try:
+                predict_d[ui][active_item] = up/down    
+            except ZeroDivisionError:
+                predict_d[ui][active_item] = avg_d[ui] # error 발생시 mean값으로 대체.
+    
+    return predict_d
+
+
+predict_cos = predict_with_knn(data = train, sim_metric = cosine_sim, k = 10)
+predict_pcc = predict_with_knn(data = train, sim_metric = pcc_sim, k = 10)
+predict_msd = predict_with_knn(data = train, sim_metric = msd_sim, k = 10)
+predict_jac = predict_with_knn(data = train, sim_metric = jaccard_sim, k = 10)
+predict_sig = predict_with_knn(data = train, sim_metric = sigmoid_sim, k = 10)
 
 
 
+def MAE(pred, real):
+    
+    up = sum([abs(i[0]-i[1]) for i in zip(pred, real)])
+    down = len(pred)
+    
+    return up/down
 
 
-items = set(rating_matrix['movieId'])
+def performance(data, test, predict_d):
+    print('performance')
+    users = data.keys() # whole users
+    
+    performance_mae = 0
+    
+    for i in users: # 모든 유저를 돌면서, 
+        pred_=[]
+        real_=[]
+        for j in test[i]: # test 셋이 존재하는 item에 대해,
+            pred_.append(predict_d[i][j])
+            real_.append(test[i][j])
+        
+        performance_mae += MAE(pred_, real_)
+    
+    return performance_mae / len(users)
 
-unrated = items.difference()
-
-#%%
-
-# prediction KNN 
-
-
-#%%
-
-# performance check
+perform_cos = performance(data=rd, test=test, predict_d=predict_cos)
+perform_pcc = performance(data=rd, test=test, predict_d=predict_pcc)
+perform_msd = performance(data=rd, test=test, predict_d=predict_msd)
+perform_jac = performance(data=rd, test=test, predict_d=predict_jac)
+perform_sig = performance(data=rd, test=test, predict_d=predict_sig)
