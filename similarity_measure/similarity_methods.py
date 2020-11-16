@@ -8,7 +8,6 @@ Created on Fri Oct 23 13:16:24 2020
 import numpy as np
 import math
 
-#%%
 def cosine_similarity(a,b): #a,b: list type # must be co-rated
 
     if len(a) == 0:
@@ -19,7 +18,6 @@ def cosine_similarity(a,b): #a,b: list type # must be co-rated
 
     return up/down
 
-#%%
 def PCC_similarity(a,b): #a,b: list type # must be co-rated
 
     if len(a) == 0:
@@ -35,7 +33,6 @@ def PCC_similarity(a,b): #a,b: list type # must be co-rated
         return 0
     return up/down
 
-#%%   
 def MSD_similarity(a,b): #a,b: list type # must be co-rated
 
     if len(a) == 0:
@@ -45,7 +42,6 @@ def MSD_similarity(a,b): #a,b: list type # must be co-rated
     
     return abs(1 - dif/len(a))
 
-#%%    
 def Jaccard_similarity(a,b): #a,b # must be whole rating respectively
 
     if len(a) == 0:
@@ -57,11 +53,4 @@ def Jaccard_similarity(a,b): #a,b # must be whole rating respectively
     return len(a.intersection(b)) / len(a.union(b))
 
 
-#%%
-# def test(a,b):
-#     return cosine_similarity(a,b),PCC_similarity(a,b),MSD_similarity(a,b)
-# test([1], [1])
-# test([1,2,1,2,3,4], [4,3,3,4,2,3])
-# test([1,2,5],[4,4,5])
-# test([1],[5])
-# test([1,1],[5,5])
+

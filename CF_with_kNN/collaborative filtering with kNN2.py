@@ -8,15 +8,17 @@ Created on Sun Nov 15 20:29:58 2020
 
 from load_data import load_data
 from similarity_measure import similarity_methods, sigmoid_mapping
-import math
-from scipy.sparse import csr_matrix
 from tqdm import tqdm
 import numpy as np
 import random
 import pickle
 
+
+# 1. data load
 rd = load_data.user_item_dictionary()
 
+
+# 2. train/test split
 def train_test_split(data, test_ratio = 0.2, random_state = 92): # data: movie lens dataset
     print('split dataset')    
     train_set = {}
@@ -41,6 +43,7 @@ train, test = train_test_split(data=rd, test_ratio = 0.2)
 
 def similarity_calculation(data, measure = 'cosine'):
     print('similarity calculation')
+    
     user_id = list(data.keys())
     sim_dic = {}
     idx = 0
@@ -140,21 +143,22 @@ def similarity_calculation(data, measure = 'cosine'):
 
 
 
-# make simliarity matrics to pickle
 
-cosine = similarity_calculation(train, 'cosine')
-pcc = similarity_calculation(train,'pcc')
-msd = similarity_calculation(train,'msd')
-jaccard = similarity_calculation(train,'jaccard')
-sigmoid = similarity_calculation(train,'sigmoid')
+# uses similarity calculation
+cosine_sim = similarity_calculation(train, 'cosine')
+pcc_sim = similarity_calculation(train,'pcc')
+msd_sim = similarity_calculation(train,'msd')
+jaccard_sim = similarity_calculation(train,'jaccard')
+sigmoid_sim = similarity_calculation(train,'sigmoid')
 
-dics = [cosine, pcc, msd, jaccard, sigmoid]
+
+# make simliarity matrics to pickle file
+dics = [cosine_sim, pcc_sim, msd_sim, jaccard_sim, sigmoid_sim]
 dics_n = ['cos_sim_dic', 'pcc_sim_dic', 'msd_sim_dic', 'jac_sim_dic', 'sig_sim_dic']
 
 
 
-
-def predict_with_knn(data, sim_metric=cosine, k=7):
+def predict_with_knn(data, sim_metric=cosine_sim, k=10):
     print('predict')
     
     k=7
@@ -199,11 +203,11 @@ def predict_with_knn(data, sim_metric=cosine, k=7):
     return predict_d
 
 
-predict_cos = predict_with_knn(data = train, sim_metric = 'cosine', k = 7)
-predict_pcc = predict_with_knn(data = train, sim_metric = 'pcc', k = 7)
-predict_msd = predict_with_knn(data = train, sim_metric = 'msd', k = 7)
-predict_jac = predict_with_knn(data = train, sim_metric = 'jac', k = 7)
-predict_sig = predict_with_knn(data = train, sim_metric = 'sig', k = 7)
+predict_cos = predict_with_knn(data = train, sim_metric = cosine_sim, k = 10)
+predict_pcc = predict_with_knn(data = train, sim_metric = pcc_sim, k = 10)
+predict_msd = predict_with_knn(data = train, sim_metric = msd_sim, k = 10)
+predict_jac = predict_with_knn(data = train, sim_metric = jaccard_sim, k = 10)
+predict_sig = predict_with_knn(data = train, sim_metric = sigmoid_sim, k = 10)
 
 
 
@@ -231,3 +235,9 @@ def performance(data, test, predict_d):
         performance_mae += MAE(pred_, real_)
     
     return performance_mae / len(users)
+
+perform_cos = performance(data=rd, test=test, predict_d=predict_cos)
+perform_pcc = performance(data=rd, test=test, predict_d=predict_pcc)
+perform_msd = performance(data=rd, test=test, predict_d=predict_msd)
+perform_jac = performance(data=rd, test=test, predict_d=predict_jac)
+perform_sig = performance(data=rd, test=test, predict_d=predict_sig)
