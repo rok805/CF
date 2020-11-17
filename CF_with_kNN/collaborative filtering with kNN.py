@@ -191,13 +191,14 @@ def predict_with_knn(data, sim_metric, k):
         active_item_dic[ui] = {}
         predict_d[ui] = {}
         
-        #1. find 'active item' rated by 'nearest neighbor'    
+        #1. find 'active item' rated by 'nearest neighbor'   
+        # return values = similarity, number of co-rated, rating
         for active_item in unrated:
             active_item_dic[ui][active_item]=[]
             
             for neighbor in users:
-                if active_item in data[neighbor].keys(): # neighbor 중에서 unrated active item을 갖고 있다면,
-                    active_item_dic[ui][active_item].append(sim_metric[ui][neighbor] + (data[neighbor][active_item],)) # similarity, number of co-rated, rating        
+                if active_item in data[neighbor].keys(): 
+                    active_item_dic[ui][active_item].append(sim_metric[ui][neighbor] + (data[neighbor][active_item],))      
         
         #2. create predict value
             predict_d[ui][active_item] = 0
@@ -215,7 +216,7 @@ def predict_with_knn(data, sim_metric, k):
                 if np.isnan(predict_d[ui][active_item]):
                     predict_d[ui][active_item] = avg_d[ui]
             except ZeroDivisionError:
-                predict_d[ui][active_item] = avg_d[ui] # error 발생시 mean값으로 대체.
+                predict_d[ui][active_item] = avg_d[ui] # replace mean when error appears.
     
     return predict_d
 
@@ -240,10 +241,10 @@ def performance_mae(data, test, predict_d):
     
     performance_mae = 0
     
-    for i in users: # 모든 유저를 돌면서, 
+    for i in users: 
         pred_=[]
         real_=[]
-        for j in test[i]: # test 셋이 존재하는 item에 대해,
+        for j in test[i]: 
             pred_.append(predict_d[i][j])
             real_.append(test[i][j])
         
