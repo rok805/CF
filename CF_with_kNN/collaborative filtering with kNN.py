@@ -11,15 +11,12 @@ from similarity_measure import similarity_methods, sigmoid_mapping
 from tqdm import tqdm
 import numpy as np
 import random
-import pickle
 
 
-# 1. data load
-rd = load_data.user_item_dictionary()
 
 
-# 2. train/test split
-def train_test_split(data, test_ratio = 0.2, random_state = 92): # data: movie lens dataset
+# train/test split
+def train_test_split(data, test_ratio = 0.2, random_state = 1004): # data: movie lens dataset
     print('split dataset')    
     train_set = {}
     test_set = {}
@@ -36,12 +33,11 @@ def train_test_split(data, test_ratio = 0.2, random_state = 92): # data: movie l
     
     return train_set, test_set
 
-train, test = train_test_split(data=rd, test_ratio = 0.2)
 
 
 
-
-def similarity_calculation(data, measure = 'cosine'):
+# similarity_calculation
+def similarity_calculation(data, measure):
     print('similarity calculation')
     
     user_id = list(data.keys())
@@ -63,7 +59,9 @@ def similarity_calculation(data, measure = 'cosine'):
     elif measure == 'sigmoid':
         sim_measure = sigmoid_mapping.sigmoid_mapping_similarity
         idx+=3
-    
+    elif measure == 'sigmoid_jaccard':
+        sim_measure = sigmoid_mapping.sigmoid_mapping_similarity
+        idx+=4
     
     if idx == 1: # For cosine, pcc, msd 
         for user in tqdm(user_id):
@@ -141,27 +139,44 @@ def similarity_calculation(data, measure = 'cosine'):
         return sim_dic
 
 
+    if idx == 4: # For sigmoid with jaccard
+    
+        sigmoid_dic = sigmoid_mapping.sigmoid_mapping_d()
+        
+        for user in tqdm(user_id):
+            
+            sim_dic[user] = {}
+            
+            tmp = user_id.copy()
+            tmp.remove(user)
+            neighbors = tmp # active user removed.
+            
+            for neighbor in neighbors:
+                
+                corated = set(data[user].keys()).intersection(set(data[neighbor].keys()))
+                
+                ui = []
+                uj = []
+                
+                for c in corated:
+                    
+                    ui.append(data[user][c])
+                    uj.append(data[neighbor][c])
+                
+                s = sim_measure(ui, uj, sigmoid_dic = sigmoid_dic) #sig
+                j = len(corated) / (len(data[user].keys()) + len(data[neighbor].keys())) #jaccard
+                
+                sim_dic[user][neighbor] = (s*j, len(corated))
+        
+        return sim_dic
 
 
 
-# uses similarity calculation
-cosine_sim = similarity_calculation(train, 'cosine')
-pcc_sim = similarity_calculation(train,'pcc')
-msd_sim = similarity_calculation(train,'msd')
-jaccard_sim = similarity_calculation(train,'jaccard')
-sigmoid_sim = similarity_calculation(train,'sigmoid')
 
-
-# make simliarity matrics to pickle file
-dics = [cosine_sim, pcc_sim, msd_sim, jaccard_sim, sigmoid_sim]
-dics_n = ['cos_sim_dic', 'pcc_sim_dic', 'msd_sim_dic', 'jac_sim_dic', 'sig_sim_dic']
-
-
-
-def predict_with_knn(data, sim_metric=cosine_sim, k=10):
+# prediction
+def predict_with_knn(data, sim_metric, k):
     print('predict')
     
-    k=7
     rating = load_data.create_rating()
     items = set(rating['movieId'])
     
@@ -196,21 +211,18 @@ def predict_with_knn(data, sim_metric=cosine_sim, k=10):
                 up += (i[0]*i[2])
                 down += i[0]
             try:
-                predict_d[ui][active_item] = up/down    
+                predict_d[ui][active_item] = up/down
+                if np.isnan(predict_d[ui][active_item]):
+                    predict_d[ui][active_item] = avg_d[ui]
             except ZeroDivisionError:
                 predict_d[ui][active_item] = avg_d[ui] # error 발생시 mean값으로 대체.
     
     return predict_d
 
 
-predict_cos = predict_with_knn(data = train, sim_metric = cosine_sim, k = 10)
-predict_pcc = predict_with_knn(data = train, sim_metric = pcc_sim, k = 10)
-predict_msd = predict_with_knn(data = train, sim_metric = msd_sim, k = 10)
-predict_jac = predict_with_knn(data = train, sim_metric = jaccard_sim, k = 10)
-predict_sig = predict_with_knn(data = train, sim_metric = sigmoid_sim, k = 10)
 
 
-
+# MAE formula
 def MAE(pred, real):
     
     up = sum([abs(i[0]-i[1]) for i in zip(pred, real)])
@@ -219,8 +231,11 @@ def MAE(pred, real):
     return up/down
 
 
-def performance(data, test, predict_d):
-    print('performance')
+
+
+# performance calculation
+def performance_mae(data, test, predict_d):
+    print('performance_mae')
     users = data.keys() # whole users
     
     performance_mae = 0
@@ -236,8 +251,61 @@ def performance(data, test, predict_d):
     
     return performance_mae / len(users)
 
-perform_cos = performance(data=rd, test=test, predict_d=predict_cos)
-perform_pcc = performance(data=rd, test=test, predict_d=predict_pcc)
-perform_msd = performance(data=rd, test=test, predict_d=predict_msd)
-perform_jac = performance(data=rd, test=test, predict_d=predict_jac)
-perform_sig = performance(data=rd, test=test, predict_d=predict_sig)
+
+
+
+
+
+# 1. data load
+rd = load_data.user_item_dictionary()    
+
+performance_d = {}
+
+
+kf_=3
+knn_=[5,10,15,20]
+
+for k_fold in list(range(kf_)):
+    print('k_fold {}'.format(k_fold))
+    performance_d[k_fold] = {}
+    
+    # 2. split train/test set
+    train, test = train_test_split(data=rd, test_ratio = 0.2, random_state = k_fold)
+
+    # 3. uses similarity calculation
+    sim_cos = similarity_calculation(train, 'cosine')
+    sim_pcc = similarity_calculation(train,'pcc')
+    sim_msd = similarity_calculation(train,'msd')
+    sim_jac = similarity_calculation(train,'jaccard')
+    sim_sig = similarity_calculation(train,'sigmoid')
+    sim_sig2 = similarity_calculation(train,'sigmoid_jaccard')
+
+    
+    for k_neighbor in knn_:
+        
+        # 4. prediction
+        predict_cos = predict_with_knn(data = train, sim_metric = sim_cos, k = k_neighbor)
+        predict_pcc = predict_with_knn(data = train, sim_metric = sim_pcc, k = k_neighbor)
+        predict_msd = predict_with_knn(data = train, sim_metric = sim_msd, k = k_neighbor)
+        predict_jac = predict_with_knn(data = train, sim_metric = sim_jac, k = k_neighbor)
+        predict_sig = predict_with_knn(data = train, sim_metric = sim_sig, k = k_neighbor)
+        predict_sig2 = predict_with_knn(data = train, sim_metric = sim_sig2, k = k_neighbor)
+    
+    
+        # 5. performance
+        mae_cos = performance_mae(data=rd, test=test, predict_d=predict_cos)
+        mae_pcc = performance_mae(data=rd, test=test, predict_d=predict_pcc)
+        mae_msd = performance_mae(data=rd, test=test, predict_d=predict_msd)
+        mae_jac = performance_mae(data=rd, test=test, predict_d=predict_jac)
+        mae_sig = performance_mae(data=rd, test=test, predict_d=predict_sig)
+        mae_sig2 = performance_mae(data=rd, test=test, predict_d=predict_sig2)
+
+        
+        performance_d[k_fold][k_neighbor]={'cos':mae_cos,
+                                           'pcc':mae_pcc,
+                                           'msd':mae_msd,
+                                           'jac':mae_jac,
+                                           'sig':mae_sig,
+                                           'sig2':mae_sig2}
+
+
