@@ -16,6 +16,8 @@ def create_rating():
 
 def create_rating_1m():
     rating = pd.read_csv('movielens/1M/ratings.dat', sep='::', header=None)
+    rating.columns = ['userId','movieId','rating','timestamp']
+    
     return rating
 
 
@@ -33,6 +35,18 @@ def user_item_dictionary():
         
     return rd
 
+def user_item_dictionary_1M():
+    
+    rating = create_rating_1m()
+    rd = {}
+    users = set(rating['userId'])
+    for i in users: 
+        rd[i] = {}
+        tmp = rating[rating['userId']==i]
+        
+        rd[i] = {a:b for a,b in zip(tmp['movieId'],tmp['rating'])}
+        
+    return rd
 
 
 # item genre data load
