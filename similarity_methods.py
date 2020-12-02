@@ -8,49 +8,100 @@ Created on Fri Oct 23 13:16:24 2020
 import numpy as np
 import math
 
-def cosine_similarity(a,b): #a,b: list type # must be co-rated
 
-    if len(a) == 0:
-        return 0
-    
-    up=np.dot(a,b)
-    down=(math.sqrt(sum([i**2 for i in a])) * math.sqrt(sum([j**2 for j in b])))
+def cosine_similarity(ui, uj):  # uij, uj: dictionary
 
-    return up/down
+    ui_item = set(ui.keys())
+    uj_item = set(uj.keys())
+    corated_item = ui_item.intersection(uj_item)
+    c_length = len(corated_item)
 
-def PCC_similarity(a,b): #a,b: list type # must be co-rated
+    if c_length == 0:  # replace 0 when there is no co-rated rating.
+        return 0, c_length
 
-    if len(a) == 0:
-        return 0
-    
-    a_mean=np.mean(a) # average of a
-    b_mean=np.mean(b) # average of b
+    ui_cr = [ui[c] for c in corated_item]
+    uj_cr = [uj[c] for c in corated_item]
 
-    up=np.dot([i-a_mean for i in a],[j-b_mean for j in b])
-    down=(math.sqrt(sum([(i-a_mean)**2 for i in a])) * math.sqrt(sum([(j-b_mean)**2 for j in b])))
+    up = np.dot(ui_cr, uj_cr)
+    down = (math.sqrt(sum([i ** 2 for i in ui_cr])) *
+            math.sqrt(sum([j ** 2 for j in uj_cr])))
 
-    if down == 0.0:
-        return 0
-    return up/down
-
-def MSD_similarity(a,b): #a,b: list type # must be co-rated
-
-    if len(a) == 0:
-        return 0
-    
-    dif = sum([(a-b)**2 for a,b in zip(a,b)])
-    
-    return abs(1 - dif/len(a))
-
-def Jaccard_similarity(a,b): #a,b # must be whole rating respectively
-
-    if len(a) == 0:
-        return 0
-    
-    a = set(a)
-    b = set(b)
-    
-    return len(a.intersection(b)) / len(a.union(b))
+    return up/down, c_length
 
 
+def PCC_similarity(ui, uj):
 
+    ui_item = set(ui.keys())
+    uj_item = set(uj.keys())
+    corated_item = ui_item.intersection(uj_item)
+    c_length = len(corated_item)
+
+    if c_length == 0:  # replace 0 when there is no co-rated rating.
+        return 0, c_length
+
+    ui_mean = np.mean(list(ui.values()))
+    uj_mean = np.mean(list(uj.values()))
+
+    up = sum([(ui[c]-ui_mean) * (uj[c]-uj_mean) for c in corated_item])
+    down = np.sqrt(sum([(ui[i]-ui_mean) ** 2 for i in corated_item])) \
+        * np.sqrt(sum([(uj[j]-uj_mean) ** 2 for j in corated_item]))
+
+    try:
+        return up/down, c_length
+    except ZeroDivisionError:
+        return 0, c_length
+
+
+def MSD_similarity(ui, uj):
+
+    ui_item = set(ui.keys())
+    uj_item = set(uj.keys())
+    corated_item = ui_item.intersection(uj_item)
+    c_length = len(corated_item)
+
+    if c_length == 0:
+        return 0, c_length
+
+    ui_cr = [ui[c] for c in corated_item]
+    uj_cr = [uj[c] for c in corated_item]
+
+    up = sum([(i - j) ** 2 for i, j in zip(ui_cr, uj_cr)])
+    down = c_length
+
+    return 1 - up/down, c_length
+
+
+def Jaccard_similarity(ui, uj):
+
+    ui_item = set(ui.keys())
+    uj_item = set(uj.keys())
+    corated_item = ui_item.intersection(uj_item)
+    c_length = len(corated_item)
+
+    up = len(corated_item)
+    down = len(ui_item.union(uj_item))
+
+    return up/down, c_length
+
+
+def os(ui, uj, N):
+
+    # PNCR
+    corated = set(ui.keys()).intersection(set(uj.keys()))
+
+    c_length = len(corated)
+
+    if c_length == 0:
+        return 0, c_length
+
+    pncr = np.exp(-(N-c_length)/N)
+
+    # ADF
+
+    basket = []
+
+    for c in corated:
+        basket.append(np.exp(- abs(ui[c] - uj[c]) / max(ui[c], uj[c])))
+    adf = sum(basket) / c_length
+
+    return pncr * adf, c_length
