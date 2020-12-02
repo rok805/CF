@@ -15,7 +15,7 @@ import random
 import pickle
 import math
 
-
+####
 class CF:
 
     def __init__(self, data, test_ratio, random_state, measure, k, soso=3):
