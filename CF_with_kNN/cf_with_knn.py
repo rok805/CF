@@ -15,7 +15,7 @@ import random
 import pickle
 import math
 
-####
+
 class CF:
 
     def __init__(self, data, test_ratio, random_state, measure, k, soso=3):
@@ -28,6 +28,9 @@ class CF:
 
         # new rating mapping.
         self.ratings_list = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]
+        
+        self.max_r = max(self.ratings_list)
+
 
     # train/test split
     def train_test_split(self):
@@ -146,25 +149,28 @@ class CF:
 
                 # compare paper and propose
                 if self.measure == 'os_sig':
-                    self.sim_d[ui][uj] = sigmoid_mapping.os_sig_max(
+                    self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_max(
                         ui=self.train[ui],
                         uj=self.train[uj],
                         N=self.N,
-                        sigmoid_dic=sigmoid_dic_d_3)
+                        sigmoid_dic=sigmoid_dic_d_3,
+                        max_r=self.max_r)
 
                 elif self.measure == 'os_sig_pos':
-                    self.sim_d[ui][uj] = sigmoid_mapping.os_sig_max(
+                    self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_max(
                         ui=self.train[ui],
                         uj=self.train[uj],
                         N=self.N,
-                        sigmoid_dic=sigmoid_dic_d2_1)
+                        sigmoid_dic=sigmoid_dic_d3_2,
+                        max_r=self.max_r)
 
                 elif self.measure == 'os_sig_neg':
-                    self.sim_d[ui][uj] = sigmoid_mapping.os_sig_max(
+                    self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_max(
                         ui=self.train[ui],
                         uj=self.train[uj],
                         N=self.N,
-                        sigmoid_dic=sigmoid_dic_d3_1)
+                        sigmoid_dic=sigmoid_dic_d2_2,
+                        max_r=self.max_r)
 
 ################################################################
                 elif self.measure == 'sig1':
@@ -194,7 +200,7 @@ class CF:
                         self.train[ui],
                         self.train[uj],
                         self.N,
-                        sigmoid_dic=sigmoid_dic_d2_2)
+                        sigmoid_dic=sigmoid_dic_d_3)
                 elif self.measure == 'sig2_jac':
                     sig = sigmoid_mapping.sigmoid_mapping_similarity(
                         self.train[ui],
@@ -402,7 +408,7 @@ class CF:
 
         
 rd = load_data.user_item_dictionary()
-similarity_measures = ['sig1','sig2','sig3'] # 'os', 'os_sig', 'os_sig_pos', 'os_sig_neg'
+similarity_measures = ['os_sig', 'os_sig_pos', 'os_sig_neg'] # 'os', 'os_sig', 'os_sig_pos', 'os_sig_neg'
 random_states = [1, 2, 3, 4, 5]
 k_ = list(range(10, 101, 10))
 

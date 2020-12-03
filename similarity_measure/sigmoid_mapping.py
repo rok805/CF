@@ -200,6 +200,55 @@ def os_sig_max(ui, uj, N, sigmoid_dic):
 
     return pncr * adf, c_length
 
+def os_sig_no_max(ui, uj, N, sigmoid_dic, max_r):
+
+    # PNCR
+    corated_item = set(ui.keys()).intersection(set(uj.keys()))
+    c_length = len(corated_item)
+
+    if c_length == 0:  # replace 0 when there is no co-rated rating.
+        return 0, c_length
+
+    pncr = np.exp(-(N-c_length)/N)
+
+    # ADF
+    dist = []
+    for c in corated_item:
+        a = (ui[c], sigmoid_dic[ui[c]])
+        b = (uj[c], sigmoid_dic[uj[c]])
+
+        dist.append(np.exp(- (euclidean_dist(a, b) / max_r) ))
+
+    adf = sum(dist) / c_length
+
+    return pncr * adf, c_length
+
+
+# distance between sigmoid mapping values
+def sigmoid_mapping_similarity(ui, uj, N, sigmoid_dic):
+
+    ui_item = set(ui.keys())
+    uj_item = set(uj.keys())
+    corated_item = ui_item.intersection(uj_item)
+    c_length = len(corated_item)
+
+    if c_length == 0:  # replace 0 when there is no co-rated rating.
+        return 0, c_length
+
+    dist = []
+    for c in corated_item:
+        a = (ui[c], sigmoid_dic[ui[c]])
+        b = (uj[c], sigmoid_dic[uj[c]])
+
+        dist.append(euclidean_dist(a, b))
+
+    similarity = 1 / (1+sum(dist))**2
+
+    # pncr
+    pncr = np.exp(-(N-c_length)/N)
+
+    return similarity * pncr, c_length
+
 
 def pref_ratio(data):
 
@@ -225,28 +274,3 @@ def pref_ratio(data):
 
     return rd_pref
 
-
-# distance between sigmoid mapping values
-def sigmoid_mapping_similarity(ui, uj, N, sigmoid_dic):
-
-    ui_item = set(ui.keys())
-    uj_item = set(uj.keys())
-    corated_item = ui_item.intersection(uj_item)
-    c_length = len(corated_item)
-
-    if c_length == 0:  # replace 0 when there is no co-rated rating.
-        return 0, c_length
-
-    dist = []
-    for c in corated_item:
-        a = (ui[c], sigmoid_dic[ui[c]])
-        b = (uj[c], sigmoid_dic[uj[c]])
-
-        dist.append(euclidean_dist(a, b))
-
-    similarity = 1 / abs(1+sum(dist))
-
-    # pncr
-    pncr = np.exp(-(N-c_length)/N)
-
-    return similarity * pncr, c_length
