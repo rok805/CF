@@ -465,7 +465,7 @@ for k in k_2:
                 experiment_result2[k][rs][mea] = cf.performance_mae
 
 # %%
-
+agg_d = x
 # k-fold aggregation
 agg_d = {}
 s_m = similarity_measures
@@ -492,11 +492,11 @@ plt.ylabel('MAE')
 plt.xlabel('k neighbors')
 
 # write result
-with open('e_os1130_mine_d_3(9).pickle', 'wb') as f:
+with open('result/e_os1204_os_sig.pos.neg_max.r_d.3(11).pickle', 'wb') as f:
     pickle.dump(agg_d, f)
 
 # save result
-with open('e_os1127_desc_mid3_k_100(4).pickle', 'rb') as f:
+with open('result/e_os1128_desc_mid3_k_100(6).pickle', 'rb') as f:
     agg = pickle.load(f)
 
 x={}
@@ -509,3 +509,8 @@ for m in similarity_measures:
 agg_d = agg
 
 #####
+x={}
+x['os_sig_max_r'] = {}
+agg['os_sig_max'] = {}
+for i in range(10,101,10):
+    x['os_sig_max_r'][i] = agg_d['os_sig'][i]
