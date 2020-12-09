@@ -5,7 +5,7 @@ Created on Sat Nov 21 04:17:20 2020
 
 @author: cheongrok
 """
-
+#%%
 from similarity_measure import similarity_methods, sigmoid_mapping
 from load_data import load_data
 import matplotlib.pyplot as plt
@@ -18,13 +18,15 @@ import math
 
 class CF:
 
-    def __init__(self, data, test_ratio, random_state, measure, k, soso=3):
+    def __init__(self, data, test_ratio, random_state, measure, k, soso=3, new=True):
         self.data = data
+        self.new_data = None
         self.test_ratio = test_ratio
         self.random_state = random_state
         self.measure = measure
         self.k = k
         self.mid = soso
+        self.new = new
 
         # new rating mapping.
         self.ratings_list = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]
@@ -75,35 +77,63 @@ class CF:
         users = self.train.keys()
         self.sim_d = {}
 
+        self.new_data = sigmoid_mapping.new_rating_mean_1(self.train)  # new rating method
+
         for ui in tqdm(users):
             neighbors = list(users)
             neighbors.remove(ui)
 
             self.sim_d[ui] = {}
-
-            for uj in neighbors:
-
-                if self.measure == 'cos':
-                    self.sim_d[ui][uj] = similarity_methods.cosine_similarity(
-                        self.train[ui],
-                        self.train[uj])
-                if self.measure == 'pcc':
-                    self.sim_d[ui][uj] = similarity_methods.PCC_similarity(
-                        self.train[ui],
-                        self.train[uj])
-                if self.measure == 'msd':
-                    self.sim_d[ui][uj] = similarity_methods.MSD_similarity(
-                        self.train[ui],
-                        self.train[uj])
-                if self.measure == 'jac':
-                    self.sim_d[ui][uj] = similarity_methods.Jaccard_similarity(
-                        self.train[ui],
-                        self.train[uj])
-                if self.measure == 'os':
-                    self.sim_d[ui][uj] = similarity_methods.os(
-                        self.train[ui],
-                        self.train[uj],
-                        self.N)
+            
+            if not self.new:  #  기본적인 data 로 유사도를 구함.
+                for uj in neighbors:
+    
+                    if self.measure == 'cos':
+                        self.sim_d[ui][uj] = similarity_methods.cosine_similarity(
+                            self.train[ui],
+                            self.train[uj])
+                    if self.measure == 'pcc':
+                        self.sim_d[ui][uj] = similarity_methods.PCC_similarity(
+                            self.train[ui],
+                            self.train[uj])
+                    if self.measure == 'msd':
+                        self.sim_d[ui][uj] = similarity_methods.MSD_similarity(
+                            self.train[ui],
+                            self.train[uj])
+                    if self.measure == 'jac':
+                        self.sim_d[ui][uj] = similarity_methods.Jaccard_similarity(
+                            self.train[ui],
+                            self.train[uj])
+                    if self.measure == 'os':
+                        self.sim_d[ui][uj] = similarity_methods.os(
+                            self.train[ui],
+                            self.train[uj],
+                            self.N)
+            
+            elif self.new:  #  새로운 data 로 유사도를 구함.
+                for uj in neighbors:
+    
+                    if self.measure == 'cos':
+                        self.sim_d[ui][uj] = similarity_methods.cosine_similarity(
+                            self.new_data[ui],
+                            self.new_data[uj])
+                    if self.measure == 'pcc':
+                        self.sim_d[ui][uj] = similarity_methods.PCC_similarity(
+                            self.new_data[ui],
+                            self.new_data[uj])
+                    if self.measure == 'msd':
+                        self.sim_d[ui][uj] = similarity_methods.MSD_similarity(
+                            self.new_data[ui],
+                            self.new_data[uj])
+                    if self.measure == 'jac':
+                        self.sim_d[ui][uj] = similarity_methods.Jaccard_similarity(
+                            self.new_data[ui],
+                            self.new_data[uj])
+                    if self.measure == 'os':
+                        self.sim_d[ui][uj] = similarity_methods.os(
+                            self.new_data[ui],
+                            self.new_data[uj],
+                            self.N)
 
         # return self.sim_d
 
@@ -408,7 +438,7 @@ class CF:
 
         
 rd = load_data.user_item_dictionary()
-similarity_measures = ['os_sig', 'os_sig_pos', 'os_sig_neg'] # 'os', 'os_sig', 'os_sig_pos', 'os_sig_neg'
+similarity_measures = ['cos', 'pcc', 'jac', 'msd', 'os'] # 'os', 'os_sig', 'os_sig_pos', 'os_sig_neg'
 random_states = [1, 2, 3, 4, 5]
 k_ = list(range(10, 101, 10))
 

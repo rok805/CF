@@ -121,24 +121,14 @@ def sigmoid_mapping_d3_2(ratings_list, mid):
     return sigmoid_dic
 
 
+def new_rating_mean_1(data):
 
-def new_rating_sigmoid(data):
+    for i in data: # users
 
-    for i in data:
+        m = np.mean(list(data[i].values()))  # user's mean
 
-        m = np.mean(list(data[i].values()))  # mean
-        s = np.std(list(data[i].values()))  # std
-        items = set(data[i].keys())
-
-        #  ui mapping dictionary
-        d = {}
-        for x in items:
-            y = 1 / (1 + np.exp(-data[i][x] + m)) - 0.5
-            d[data[i][x]] = data[i][x] + y / (1 + s**2)
-
-        # ui rating mapping
-        for item in data[i]:
-            data[i][item] = d[data[i][item]]
+        for item in data[i]:  # user i's items
+            data[i][item] = round((data[i][item] - m) / m, 5)
 
     return data
 
