@@ -5,7 +5,8 @@ Created on Sat Nov 21 04:17:20 2020
 
 @author: cheongrok
 """
-#%%
+
+
 from similarity_measure import similarity_methods, sigmoid_mapping
 from load_data import load_data
 import matplotlib.pyplot as plt
@@ -14,11 +15,12 @@ import numpy as np
 import random
 import pickle
 import math
-
+import copy
+import time
 
 class CF:
 
-    def __init__(self, data, test_ratio, random_state, measure, k, soso=3, new=True):
+    def __init__(self, data, test_ratio, random_state, measure, k, soso=3, new=0):
         self.data = data
         self.new_data = None
         self.test_ratio = test_ratio
@@ -28,10 +30,13 @@ class CF:
         self.mid = soso
         self.new = new
 
-        # new rating mapping.
+        #  for rating sigmoid mapping.
         self.ratings_list = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]
         
         self.max_r = max(self.ratings_list)
+
+        #  for new_rating_mean method
+        self.max_r_new = set()
 
 
     # train/test split
@@ -66,6 +71,38 @@ class CF:
                 self.mid.extend(list(self.train[i].values()))
             self.mid = np.mean(self.mid)
 
+
+        #  for new rating. 각 user의 평균을 사용하여 rating change.
+        if self.new == 1:
+            self.new_data = copy.deepcopy(self.train)
+            self.new_data = sigmoid_mapping.new_rating_mean_1(self.new_data)  # new rating method
+    
+            for i in self.new_data:
+                for j in self.new_data[i]:
+                    self.max_r_new.add(self.new_data[i][j])
+            self.max_r_new = max(self.max_r_new)
+        
+        
+        if self.new == 2:
+            self.new_data = copy.deepcopy(self.train)
+            self.new_data = sigmoid_mapping.new_rating_mean_std_2(self.new_data)  # new rating method
+    
+            for i in self.new_data:
+                for j in self.new_data[i]:
+                    self.max_r_new.add(self.new_data[i][j])
+            self.max_r_new = max(self.max_r_new)
+        
+        if self.new == 3:
+            self.new_data = copy.deepcopy(self.train)
+            self.new_data = sigmoid_mapping.new_rating_mean_std_3(self.new_data)  # new rating method 2 번째 방법.
+            
+            for i in self.new_data:
+                for j in self.new_data[i]:
+                    self.max_r_new.add(self.new_data[i][j])
+            self.max_r_new = max(self.max_r_new)
+    
+
+
         # return self.train, self.test
 
     # traditional similarity
@@ -77,7 +114,6 @@ class CF:
         users = self.train.keys()
         self.sim_d = {}
 
-        self.new_data = sigmoid_mapping.new_rating_mean_1(self.train)  # new rating method
 
         for ui in tqdm(users):
             neighbors = list(users)
@@ -85,7 +121,7 @@ class CF:
 
             self.sim_d[ui] = {}
             
-            if not self.new:  #  기본적인 data 로 유사도를 구함.
+            if not self.new == 0:  #  기본적인 data 로 유사도를 구함.
                 for uj in neighbors:
     
                     if self.measure == 'cos':
@@ -110,7 +146,7 @@ class CF:
                             self.train[uj],
                             self.N)
             
-            elif self.new:  #  새로운 data 로 유사도를 구함.
+            elif self.new != 0:  #  새로운 data 로 유사도를 구함.
                 for uj in neighbors:
     
                     if self.measure == 'cos':
@@ -143,8 +179,8 @@ class CF:
         print('-----proposed {} similarity calculation-----'.format(self.measure))
         print()
 
-        users = self.train.keys()
-        self.sim_d = {}
+        users = self.train.keys()  # whole users
+        self.sim_d = {}  # similarity matrics
 
         sigmoid_dic_d = sigmoid_mapping.sigmoid_mapping_d(ratings_list=self.ratings_list,
                                                           mid=self.mid)
@@ -169,126 +205,161 @@ class CF:
 
         rd_pref = sigmoid_mapping.pref_ratio(self.train)
 
-        for ui in tqdm(users):
-            neighbors = list(users)
-            neighbors.remove(ui)
+        if self.new != 0:  #  새로운 데이터를 사용함.
+            for ui in tqdm(users):
+                neighbors = list(users)
+                neighbors.remove(ui)
 
-            self.sim_d[ui] = {}
+                self.sim_d[ui] = {}
 
-            for uj in neighbors:
+                for uj in neighbors:
 
-                # compare paper and propose
-                if self.measure == 'os_sig':
-                    self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_max(
-                        ui=self.train[ui],
-                        uj=self.train[uj],
-                        N=self.N,
-                        sigmoid_dic=sigmoid_dic_d_3,
-                        max_r=self.max_r)
-
-                elif self.measure == 'os_sig_pos':
-                    self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_max(
-                        ui=self.train[ui],
-                        uj=self.train[uj],
-                        N=self.N,
-                        sigmoid_dic=sigmoid_dic_d3_2,
-                        max_r=self.max_r)
-
-                elif self.measure == 'os_sig_neg':
-                    self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_max(
-                        ui=self.train[ui],
-                        uj=self.train[uj],
-                        N=self.N,
-                        sigmoid_dic=sigmoid_dic_d2_2,
-                        max_r=self.max_r)
-
-################################################################
-                elif self.measure == 'sig1':
-                    self.sim_d[ui][uj] = sigmoid_mapping.sigmoid_mapping_similarity(
-                        ui=self.train[ui],
-                        uj=self.train[uj],
-                        N=self.N,
-                        sigmoid_dic=sigmoid_dic_d_3)  # sqrt(mid)
-
-                elif self.measure == 'sig':
-                    self.sim_d[ui][uj] = sigmoid_mapping.sigmoid_mapping_similarity(
-                        self.train[ui],
-                        self.train[uj],
-                        sigmoid_dic=sigmoid_dic_d)
-                elif self.measure == 'sig_jac':
-                    sig = sigmoid_mapping.sigmoid_mapping_similarity(
-                        self.train[ui],
-                        self.train[uj],
-                        sigmoid_dic=sigmoid_dic_d)
-                    jac = similarity_methods.Jaccard_similarity(
-                        self.train[ui],
-                        self.train[uj])
-                    self.sim_d[ui][uj] = (sig[0] * jac[0], sig[1])
-
-                elif self.measure == 'sig2':
-                    self.sim_d[ui][uj] = sigmoid_mapping.sigmoid_mapping_similarity(
-                        self.train[ui],
-                        self.train[uj],
-                        self.N,
-                        sigmoid_dic=sigmoid_dic_d_3)
-                elif self.measure == 'sig2_jac':
-                    sig = sigmoid_mapping.sigmoid_mapping_similarity(
-                        self.train[ui],
-                        self.train[uj],
-                        sigmoid_dic=sigmoid_dic_d2)
-                    jac = similarity_methods.Jaccard_similarity(
-                        self.train[ui],
-                        self.train[uj])
-                    self.sim_d[ui][uj] = (sig[0] * jac[0], sig[1])
-
-                elif self.measure == 'sig2_1':
-                    self.sim_d[ui][uj] = sigmoid_mapping.sigmoid_mapping_similarity(
-                        self.train[ui],
-                        self.train[uj],
-                        sigmoid_dic=sigmoid_dic_d2_1)
-                elif self.measure == 'sig2_1_jac':
-                    sig = sigmoid_mapping.sigmoid_mapping_similarity(
-                        self.train[ui],
-                        self.train[uj],
-                        sigmoid_dic=sigmoid_dic_d2_1)
-                    jac = similarity_methods.Jaccard_similarity(
-                        self.train[ui],
-                        self.train[uj])
-                    self.sim_d[ui][uj] = (sig[0] * jac[0], sig[1])
-
-                elif self.measure == 'sig3':
-                    sig = sigmoid_mapping.sigmoid_mapping_similarity(
-                        self.train[ui],
-                        self.train[uj],
-                        self.N,
-                        sigmoid_dic=sigmoid_dic_d_3)
-                    pf = 1 - abs(rd_pref[ui]['exp'] - rd_pref[uj]['exp'])
-                    self.sim_d[ui][uj] = (sig[0] * pf, sig[1])
-                elif self.measure == 'sig3_jac':
-                    sig = sigmoid_mapping.sigmoid_mapping_similarity(
-                        self.train[ui],
-                        self.train[uj],
-                        sigmoid_dic=sigmoid_dic_d)
-                    jac = similarity_methods.Jaccard_similarity(
-                        self.train[ui],
-                        self.train[uj])
-                    pf = 1 - abs(rd_pref[ui]['exp'] - rd_pref[uj]['exp'])
-                    self.sim_d[ui][uj] = (sig[0] * jac[0] * pf, sig[1])
-
-                elif self.measure == 'sig4':
-                    self.sim_d[ui][uj] = sigmoid_mapping.sigmoid_mapping_similarity(
-                        self.train[ui],
-                        self.train[uj],
-                        sigmoid_dic=sigmoid_dic_d3)
-                elif self.measure == 'sig4_jac':
-                    sig = sigmoid_mapping.sigmoid_mapping_similarity(
-                        self.train[ui],
-                        self.train[uj],
-                        sigmoid_dic=sigmoid_dic_d3)
-                    jac = similarity_methods.Jaccard_similarity(
-                        self.train[ui],
-                        self.train[uj])
-                    self.sim_d[ui][uj] = (sig[0] * jac[0], sig[1])
+                    # compare paper and propose
+                    if self.measure == 'os_sig':
+                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean_no_max(
+                            ui=self.new_data[ui],
+                            uj=self.new_data[uj],
+                            N=self.N,
+                            sigmoid_dic=sigmoid_dic_d_3,
+                            max_r=self.max_r_new)
+    
+                    elif self.measure == 'os_sig_pos':
+                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean_no_max(
+                            ui=self.new_data[ui],
+                            uj=self.new_data[uj],
+                            N=self.N,
+                            sigmoid_dic=sigmoid_dic_d3_2,
+                            max_r=self.max_r_new)
+    
+                    elif self.measure == 'os_sig_neg':
+                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean_no_max(
+                            ui=self.new_data[ui],
+                            uj=self.new_data[uj],
+                            N=self.N,
+                            sigmoid_dic=sigmoid_dic_d2_2,
+                            max_r=self.max_r_new)
+            
+        elif self.new == 0:  # 기본 데이터를 사용함.
+            for ui in tqdm(users):
+                neighbors = list(users)
+                neighbors.remove(ui)
+    
+                self.sim_d[ui] = {}
+    
+                for uj in neighbors:
+    
+                    # compare paper and propose
+                    if self.measure == 'os_sig':
+                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean_no_max(
+                            ui=self.train[ui],
+                            uj=self.train[uj],
+                            N=self.N,
+                            sigmoid_dic=sigmoid_dic_d_3,
+                            max_r=self.max_r)
+    
+                    elif self.measure == 'os_sig_pos':
+                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean_no_max(
+                            ui=self.train[ui],
+                            uj=self.train[uj],
+                            N=self.N,
+                            sigmoid_dic=sigmoid_dic_d3_2,
+                            max_r=self.max_r)
+    
+                    elif self.measure == 'os_sig_neg':
+                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean_no_max(
+                            ui=self.train[ui],
+                            uj=self.train[uj],
+                            N=self.N,
+                            sigmoid_dic=sigmoid_dic_d2_2,
+                            max_r=self.max_r)
+    
+    ################################################################
+                    elif self.measure == 'sig1':
+                        self.sim_d[ui][uj] = sigmoid_mapping.sigmoid_mapping_similarity(
+                            ui=self.train[ui],
+                            uj=self.train[uj],
+                            N=self.N,
+                            sigmoid_dic=sigmoid_dic_d_3)  # sqrt(mid)
+    
+                    elif self.measure == 'sig':
+                        self.sim_d[ui][uj] = sigmoid_mapping.sigmoid_mapping_similarity(
+                            self.train[ui],
+                            self.train[uj],
+                            sigmoid_dic=sigmoid_dic_d)
+                    elif self.measure == 'sig_jac':
+                        sig = sigmoid_mapping.sigmoid_mapping_similarity(
+                            self.train[ui],
+                            self.train[uj],
+                            sigmoid_dic=sigmoid_dic_d)
+                        jac = similarity_methods.Jaccard_similarity(
+                            self.train[ui],
+                            self.train[uj])
+                        self.sim_d[ui][uj] = (sig[0] * jac[0], sig[1])
+    
+                    elif self.measure == 'sig2':
+                        self.sim_d[ui][uj] = sigmoid_mapping.sigmoid_mapping_similarity(
+                            self.train[ui],
+                            self.train[uj],
+                            self.N,
+                            sigmoid_dic=sigmoid_dic_d_3)
+                    elif self.measure == 'sig2_jac':
+                        sig = sigmoid_mapping.sigmoid_mapping_similarity(
+                            self.train[ui],
+                            self.train[uj],
+                            sigmoid_dic=sigmoid_dic_d2)
+                        jac = similarity_methods.Jaccard_similarity(
+                            self.train[ui],
+                            self.train[uj])
+                        self.sim_d[ui][uj] = (sig[0] * jac[0], sig[1])
+    
+                    elif self.measure == 'sig2_1':
+                        self.sim_d[ui][uj] = sigmoid_mapping.sigmoid_mapping_similarity(
+                            self.train[ui],
+                            self.train[uj],
+                            sigmoid_dic=sigmoid_dic_d2_1)
+                    elif self.measure == 'sig2_1_jac':
+                        sig = sigmoid_mapping.sigmoid_mapping_similarity(
+                            self.train[ui],
+                            self.train[uj],
+                            sigmoid_dic=sigmoid_dic_d2_1)
+                        jac = similarity_methods.Jaccard_similarity(
+                            self.train[ui],
+                            self.train[uj])
+                        self.sim_d[ui][uj] = (sig[0] * jac[0], sig[1])
+    
+                    elif self.measure == 'sig3':
+                        sig = sigmoid_mapping.sigmoid_mapping_similarity(
+                            self.train[ui],
+                            self.train[uj],
+                            self.N,
+                            sigmoid_dic=sigmoid_dic_d_3)
+                        pf = 1 - abs(rd_pref[ui]['exp'] - rd_pref[uj]['exp'])
+                        self.sim_d[ui][uj] = (sig[0] * pf, sig[1])
+                    elif self.measure == 'sig3_jac':
+                        sig = sigmoid_mapping.sigmoid_mapping_similarity(
+                            self.train[ui],
+                            self.train[uj],
+                            sigmoid_dic=sigmoid_dic_d)
+                        jac = similarity_methods.Jaccard_similarity(
+                            self.train[ui],
+                            self.train[uj])
+                        pf = 1 - abs(rd_pref[ui]['exp'] - rd_pref[uj]['exp'])
+                        self.sim_d[ui][uj] = (sig[0] * jac[0] * pf, sig[1])
+    
+                    elif self.measure == 'sig4':
+                        self.sim_d[ui][uj] = sigmoid_mapping.sigmoid_mapping_similarity(
+                            self.train[ui],
+                            self.train[uj],
+                            sigmoid_dic=sigmoid_dic_d3)
+                    elif self.measure == 'sig4_jac':
+                        sig = sigmoid_mapping.sigmoid_mapping_similarity(
+                            self.train[ui],
+                            self.train[uj],
+                            sigmoid_dic=sigmoid_dic_d3)
+                        jac = similarity_methods.Jaccard_similarity(
+                            self.train[ui],
+                            self.train[uj])
+                        self.sim_d[ui][uj] = (sig[0] * jac[0], sig[1])
         # return self.sim_d
 
     # predict using knn with mean.
@@ -433,16 +504,18 @@ class CF:
 
         return self.performance_mae
 
-# %%
+
+#%%
 # x = CF(data=rd, test_ratio=0.2, random_state=1, measure='os_sig', k=5)
 
         
 rd = load_data.user_item_dictionary()
-similarity_measures = ['cos', 'pcc', 'jac', 'msd', 'os'] # 'os', 'os_sig', 'os_sig_pos', 'os_sig_neg'
-random_states = [1, 2, 3, 4, 5]
+similarity_measures = ['os', 'os_sig', 'os_sig_pos', 'os_sig_neg'] # 'os', 'os_sig', 'os_sig_pos', 'os_sig_neg'
+random_states = [1,2,3,4,5]
 k_ = list(range(10, 101, 10))
 
 experiment_result = {}
+begin = time.time()
 for k in k_:
     experiment_result[k] = {}
 
@@ -453,7 +526,7 @@ for k in k_:
             print()
             print('==== k: {} ==== random_state: {} ==== measure: {} ===='.format(k, rs, mea))
             print()
-            cf = CF(data=rd, test_ratio=0.2, random_state=rs, measure=mea, k=k)
+            cf = CF(data=rd, test_ratio=0.2, random_state=rs, measure=mea, k=k, soso=3, new=1)
 
             if mea in ['cos', 'pcc', 'msd', 'jac', 'os']:
                 cf.run_e1()
@@ -461,7 +534,8 @@ for k in k_:
             else:
                 cf.run_e2()
                 experiment_result[k][rs][mea] = cf.performance_mae
-
+end = time.time() - begin
+print(end/60,' 분')
 
         # baseline code.
         # cf.performance_mae_baseline()
@@ -517,7 +591,7 @@ for i in agg_d:
              markersize='7',
              label=i)
 plt.legend(bbox_to_anchor=(1.0, 1.0))
-plt.title('5-fold validation, mid=3')
+plt.title('5-fold validation')
 plt.ylabel('MAE')
 plt.xlabel('k neighbors')
 

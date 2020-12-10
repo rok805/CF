@@ -123,12 +123,35 @@ def sigmoid_mapping_d3_2(ratings_list, mid):
 
 def new_rating_mean_1(data):
 
-    for i in data: # users
-
+    for i in data:  # users
         m = np.mean(list(data[i].values()))  # user's mean
 
         for item in data[i]:  # user i's items
             data[i][item] = round((data[i][item] - m) / m, 5)
+
+    return data
+
+
+def new_rating_mean_std_2(data):
+
+    for i in data:  # users
+        m = np.mean(list(data[i].values()))  # user's mean
+        s = np.std(list(data[i].values()))  # user's std
+
+        for item in data[i]:  # user i's items
+            data[i][item] = round(1 / (1 + np.exp(- data[i][item] + m)) - 0.5, 5)
+
+    return data
+
+
+def new_rating_mean_std_3(data):
+
+    for i in data:  # users
+        m = np.mean(list(data[i].values()))  # user's mean
+        s = np.std(list(data[i].values()))  # user's std
+
+        for item in data[i]:  # user i's items
+            data[i][item] = round(1 / (1 + np.exp(- data[i][item] + m)) - 0.5, 5)
 
     return data
 
@@ -208,6 +231,50 @@ def os_sig_no_max(ui, uj, N, sigmoid_dic, max_r):
         b = (uj[c], sigmoid_dic[uj[c]])
 
         dist.append(np.exp(- (euclidean_dist(a, b) / max_r) ))
+
+    adf = sum(dist) / c_length
+
+    return pncr * adf, c_length
+
+
+def os_sig_no_euclidean(ui, uj, N, sigmoid_dic, max_r):
+
+    # PNCR
+    corated_item = set(ui.keys()).intersection(set(uj.keys()))
+    c_length = len(corated_item)
+
+    if c_length == 0:  # replace 0 when there is no co-rated rating.
+        return 0, c_length
+
+    pncr = np.exp(-(N-c_length)/N)
+
+    # ADF
+    dist = []
+    for c in corated_item:
+
+        dist.append(np.exp(- (abs(ui[c] - uj[c]) / max(ui[c], uj[c])) ))
+
+    adf = sum(dist) / c_length
+
+    return pncr * adf, c_length
+
+
+def os_sig_no_euclidean_no_max(ui, uj, N, sigmoid_dic, max_r):
+
+    # PNCR
+    corated_item = set(ui.keys()).intersection(set(uj.keys()))
+    c_length = len(corated_item)
+
+    if c_length == 0:  # replace 0 when there is no co-rated rating.
+        return 0, c_length
+
+    pncr = np.exp(-(N-c_length)/N)
+
+    # ADF
+    dist = []
+    for c in corated_item:
+
+        dist.append(np.exp(- (abs(ui[c] - uj[c]) / max_r) ))
 
     adf = sum(dist) / c_length
 
