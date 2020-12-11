@@ -81,9 +81,9 @@ class CF:
                 for j in self.new_data[i]:
                     self.max_r_new.add(self.new_data[i][j])
             self.max_r_new = max(self.max_r_new)
-        
-        
-        if self.new == 2:
+
+        #  for new rating. 각 user의 평균을 사용하여 rating change. 2
+        elif self.new == 2:
             self.new_data = copy.deepcopy(self.train)
             self.new_data = sigmoid_mapping.new_rating_mean_std_2(self.new_data)  # new rating method
     
@@ -92,7 +92,8 @@ class CF:
                     self.max_r_new.add(self.new_data[i][j])
             self.max_r_new = max(self.max_r_new)
         
-        if self.new == 3:
+        #  for new rating. 각 user의 평균과 분산을 사용하여 rating change.
+        elif self.new == 3:
             self.new_data = copy.deepcopy(self.train)
             self.new_data = sigmoid_mapping.new_rating_mean_std_3(self.new_data)  # new rating method 2 번째 방법.
             
@@ -121,7 +122,7 @@ class CF:
 
             self.sim_d[ui] = {}
             
-            if not self.new == 0:  #  기본적인 data 로 유사도를 구함.
+            if self.new == 0:  #  기본적인 data 로 유사도를 구함.
                 for uj in neighbors:
     
                     if self.measure == 'cos':
@@ -216,7 +217,7 @@ class CF:
 
                     # compare paper and propose
                     if self.measure == 'os_sig':
-                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean_no_max(
+                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_max(
                             ui=self.new_data[ui],
                             uj=self.new_data[uj],
                             N=self.N,
@@ -224,7 +225,7 @@ class CF:
                             max_r=self.max_r_new)
     
                     elif self.measure == 'os_sig_pos':
-                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean_no_max(
+                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_max(
                             ui=self.new_data[ui],
                             uj=self.new_data[uj],
                             N=self.N,
@@ -232,7 +233,7 @@ class CF:
                             max_r=self.max_r_new)
     
                     elif self.measure == 'os_sig_neg':
-                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean_no_max(
+                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_max(
                             ui=self.new_data[ui],
                             uj=self.new_data[uj],
                             N=self.N,
@@ -511,7 +512,8 @@ class CF:
         
 rd = load_data.user_item_dictionary()
 similarity_measures = ['os', 'os_sig', 'os_sig_pos', 'os_sig_neg'] # 'os', 'os_sig', 'os_sig_pos', 'os_sig_neg'
-random_states = [1,2,3,4,5]
+random_states = [1]
+k_ = [50]
 k_ = list(range(10, 101, 10))
 
 experiment_result = {}
@@ -526,7 +528,7 @@ for k in k_:
             print()
             print('==== k: {} ==== random_state: {} ==== measure: {} ===='.format(k, rs, mea))
             print()
-            cf = CF(data=rd, test_ratio=0.2, random_state=rs, measure=mea, k=k, soso=3, new=1)
+            cf = CF(data=rd, test_ratio=0.2, random_state=rs, measure=mea, k=k, soso=3, new=0)
 
             if mea in ['cos', 'pcc', 'msd', 'jac', 'os']:
                 cf.run_e1()
