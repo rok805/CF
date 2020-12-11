@@ -509,12 +509,44 @@ class CF:
 #%%
 # x = CF(data=rd, test_ratio=0.2, random_state=1, measure='os_sig', k=5)
 
+rd = load_data.user_item_dictionary()
+similarity_measures0 = ['os', 'os_sig', 'os_sig_pos', 'os_sig_neg'] # 'os', 'os_sig', 'os_sig_pos', 'os_sig_neg'
+random_states0 = [1,2,3,4,5]
+k_0 = list(range(10, 101, 10))
+
+experiment_result0 = {}
+begin = time.time()
+for k in k_0:
+    experiment_result0[k] = {}
+
+    for rs in random_states0:
+        experiment_result0[k][rs] = {}
+
+        for mea in similarity_measures0:
+            print()
+            print('==== k: {} ==== random_state: {} ==== measure: {} ===='.format(k, rs, mea))
+            print()
+            cf = CF(data=rd, test_ratio=0.2, random_state=rs, measure=mea, k=k, soso=3, new=0)
+
+            if mea in ['cos', 'pcc', 'msd', 'jac', 'os']:
+                cf.run_e1()
+                experiment_result0[k][rs][mea] = cf.performance_mae
+            else:
+                cf.run_e2()
+                experiment_result0[k][rs][mea] = cf.performance_mae
+end = time.time() - begin
+print(end/60,' 분')
+
+        # baseline code.
+        # cf.performance_mae_baseline()
+        # experiment_result[k][rs]['baseline'] = cf.performance_mae_baseline
+
         
 rd = load_data.user_item_dictionary()
-similarity_measures = ['os', 'os_sig', 'os_sig_pos', 'os_sig_neg'] # 'os', 'os_sig', 'os_sig_pos', 'os_sig_neg'
-random_states = [1]
-k_ = [50]
+similarity_measures = ['cos','pcc','msd','os'] # 'os', 'os_sig', 'os_sig_pos', 'os_sig_neg'
+random_states = [1,2,3,4,5]
 k_ = list(range(10, 101, 10))
+
 
 experiment_result = {}
 begin = time.time()
@@ -528,7 +560,7 @@ for k in k_:
             print()
             print('==== k: {} ==== random_state: {} ==== measure: {} ===='.format(k, rs, mea))
             print()
-            cf = CF(data=rd, test_ratio=0.2, random_state=rs, measure=mea, k=k, soso=3, new=0)
+            cf = CF(data=rd, test_ratio=0.2, random_state=rs, measure=mea, k=k, soso=3, new=1)
 
             if mea in ['cos', 'pcc', 'msd', 'jac', 'os']:
                 cf.run_e1()
@@ -546,9 +578,10 @@ print(end/60,' 분')
 
 
 rd = load_data.user_item_dictionary()
-similarity_measures2 = ['os_sig']
-random_states2 = [1, 2, 3, 4, 5]
+similarity_measures2 = ['cos','pcc','msd','os']
+random_states2 = [1,2,3,4,5]
 k_2 = list(range(10, 101, 10))
+
 
 experiment_result2 = {}
 for k in k_2:
@@ -561,7 +594,7 @@ for k in k_2:
             print()
             print(f'==== k: {k} ==== random_state: {rs} ==== measure: {mea} ====')
             print()
-            cf = CF(data=rd, test_ratio=0.2, random_state=rs, measure=mea, k=k, soso='mean')
+            cf = CF(data=rd, test_ratio=0.2, random_state=rs, measure=mea, k=k, soso='mean', new=2)
 
             if mea in ['cos', 'pcc', 'msd', 'jac', 'os']:
                 cf.run_e1()
@@ -569,6 +602,63 @@ for k in k_2:
             else:
                 cf.run_e2()
                 experiment_result2[k][rs][mea] = cf.performance_mae
+
+
+
+rd = load_data.user_item_dictionary()
+similarity_measures3 = ['cos','pcc','msd','os']
+random_states3 = [1,2,3,4,5]
+k_3 = list(range(10, 101, 10))
+
+
+experiment_result3 = {}
+for k in k_3:
+    experiment_result3[k] = {}
+
+    for rs in random_states3:
+        experiment_result3[k][rs] = {}
+
+        for mea in similarity_measures3:
+            print()
+            print(f'==== k: {k} ==== random_state: {rs} ==== measure: {mea} ====')
+            print()
+            cf = CF(data=rd, test_ratio=0.2, random_state=rs, measure=mea, k=k, soso='mean', new=3)
+
+            if mea in ['cos', 'pcc', 'msd', 'jac', 'os']:
+                cf.run_e1()
+                experiment_result3[k][rs][mea] = cf.performance_mae
+            else:
+                cf.run_e2()
+                experiment_result3[k][rs][mea] = cf.performance_mae
+
+
+rd = load_data.user_item_dictionary()
+similarity_measures4 = ['cos','pcc','msd','os']
+random_states4 = [1,2,3,4,5]
+k_4 = list(range(10, 101, 10))
+
+
+experiment_result4 = {}
+for k in k_4:
+    experiment_result4[k] = {}
+
+    for rs in random_states4:
+        experiment_result4[k][rs] = {}
+
+        for mea in similarity_measures4:
+            print()
+            print(f'==== k: {k} ==== random_state: {rs} ==== measure: {mea} ====')
+            print()
+            cf = CF(data=rd, test_ratio=0.2, random_state=rs, measure=mea, k=k, soso='mean', new=0)
+
+            if mea in ['cos', 'pcc', 'msd', 'jac', 'os']:
+                cf.run_e1()
+                experiment_result4[k][rs][mea] = cf.performance_mae
+            else:
+                cf.run_e2()
+                experiment_result4[k][rs][mea] = cf.performance_mae
+
+                
 
 # %%
 agg_d = x

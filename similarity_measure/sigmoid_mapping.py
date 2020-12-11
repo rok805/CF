@@ -151,7 +151,7 @@ def new_rating_mean_std_3(data):
         s = np.std(list(data[i].values()))  # user's std
 
         for item in data[i]:  # user i's items
-            data[i][item] = round(1 / (1 + np.exp(- data[i][item] + m)) - 0.5, 5)
+            data[i][item] = round(1 / (1 + np.exp(- data[i][item] + m)) - 0.5, 5) / s**2
 
     return data
 
