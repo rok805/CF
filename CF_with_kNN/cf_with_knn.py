@@ -215,7 +215,6 @@ class CF:
 
                 for uj in neighbors:
 
-                    # compare paper and propose
                     if self.measure == 'os_sig':
                         self.sim_d[ui][uj] = sigmoid_mapping.os_sig_max(
                             ui=self.new_data[ui],
@@ -251,7 +250,7 @@ class CF:
     
                     # compare paper and propose
                     if self.measure == 'os_sig':
-                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean_no_max(
+                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean(
                             ui=self.train[ui],
                             uj=self.train[uj],
                             N=self.N,
@@ -259,7 +258,7 @@ class CF:
                             max_r=self.max_r)
     
                     elif self.measure == 'os_sig_pos':
-                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean_no_max(
+                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean(
                             ui=self.train[ui],
                             uj=self.train[uj],
                             N=self.N,
@@ -267,7 +266,7 @@ class CF:
                             max_r=self.max_r)
     
                     elif self.measure == 'os_sig_neg':
-                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean_no_max(
+                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean(
                             ui=self.train[ui],
                             uj=self.train[uj],
                             N=self.N,
@@ -454,7 +453,7 @@ class CF:
 
         users = self.data.keys()  # whole users
 
-        self.performance_mae = 0
+        self.mae = 0
         self.pred_ = []
         self.real_ = []
 
@@ -464,7 +463,7 @@ class CF:
                 self.real_.append(self.test[i][j])
 
         self.result = [abs(p - r) for p, r in zip(self.pred_, self.real_)]
-        self.performance_mae = sum(self.result) / len(self.result)
+        self.mae = sum(self.result) / len(self.result)
 
     # baseline performance calculation
     def performance_mae_baseline(self):
@@ -494,7 +493,7 @@ class CF:
         self.predict_kNN_Mean()
         self.performance_mae()
 
-        return self.performance_mae
+        return self.mae
 
     #  proposed similarity
     def run_e2(self):
@@ -503,181 +502,48 @@ class CF:
         self.predict_kNN_Mean()
         self.performance_mae()
 
-        return self.performance_mae
+        return self.mae
 
 
 #%%
-# x = CF(data=rd, test_ratio=0.2, random_state=1, measure='os_sig', k=5)
 
 rd = load_data.user_item_dictionary()
-similarity_measures0 = ['os', 'os_sig', 'os_sig_pos', 'os_sig_neg'] # 'os', 'os_sig', 'os_sig_pos', 'os_sig_neg'
-random_states0 = [1,2,3,4,5]
-k_0 = list(range(10, 101, 10))
 
-experiment_result0 = {}
-begin = time.time()
-for k in k_0:
-    experiment_result0[k] = {}
-
-    for rs in random_states0:
-        experiment_result0[k][rs] = {}
-
-        for mea in similarity_measures0:
-            print()
-            print('==== k: {} ==== random_state: {} ==== measure: {} ===='.format(k, rs, mea))
-            print()
-            cf = CF(data=rd, test_ratio=0.2, random_state=rs, measure=mea, k=k, soso=3, new=0)
-
-            if mea in ['cos', 'pcc', 'msd', 'jac', 'os']:
-                cf.run_e1()
-                experiment_result0[k][rs][mea] = cf.performance_mae
-            else:
-                cf.run_e2()
-                experiment_result0[k][rs][mea] = cf.performance_mae
-end = time.time() - begin
-print(end/60,' 분')
-
-        # baseline code.
-        # cf.performance_mae_baseline()
-        # experiment_result[k][rs]['baseline'] = cf.performance_mae_baseline
-
-        
-rd = load_data.user_item_dictionary()
-similarity_measures = ['cos','pcc','msd','os'] # 'os', 'os_sig', 'os_sig_pos', 'os_sig_neg'
-random_states = [1,2,3,4,5]
-k_ = list(range(10, 101, 10))
-
-
-experiment_result = {}
-begin = time.time()
-for k in k_:
-    experiment_result[k] = {}
-
-    for rs in random_states:
-        experiment_result[k][rs] = {}
-
-        for mea in similarity_measures:
-            print()
-            print('==== k: {} ==== random_state: {} ==== measure: {} ===='.format(k, rs, mea))
-            print()
-            cf = CF(data=rd, test_ratio=0.2, random_state=rs, measure=mea, k=k, soso=3, new=1)
-
-            if mea in ['cos', 'pcc', 'msd', 'jac', 'os']:
-                cf.run_e1()
-                experiment_result[k][rs][mea] = cf.performance_mae
-            else:
-                cf.run_e2()
-                experiment_result[k][rs][mea] = cf.performance_mae
-end = time.time() - begin
-print(end/60,' 분')
-
-        # baseline code.
-        # cf.performance_mae_baseline()
-        # experiment_result[k][rs]['baseline'] = cf.performance_mae_baseline
-
-
-
-rd = load_data.user_item_dictionary()
-similarity_measures2 = ['cos','pcc','msd','os']
-random_states2 = [1,2,3,4,5]
-k_2 = list(range(10, 101, 10))
-
-
-experiment_result2 = {}
-for k in k_2:
-    experiment_result2[k] = {}
-
-    for rs in random_states2:
-        experiment_result2[k][rs] = {}
-
-        for mea in similarity_measures2:
-            print()
-            print(f'==== k: {k} ==== random_state: {rs} ==== measure: {mea} ====')
-            print()
-            cf = CF(data=rd, test_ratio=0.2, random_state=rs, measure=mea, k=k, soso='mean', new=2)
-
-            if mea in ['cos', 'pcc', 'msd', 'jac', 'os']:
-                cf.run_e1()
-                experiment_result2[k][rs][mea] = cf.performance_mae
-            else:
-                cf.run_e2()
-                experiment_result2[k][rs][mea] = cf.performance_mae
-
-
-
-rd = load_data.user_item_dictionary()
-similarity_measures3 = ['cos','pcc','msd','os']
-random_states3 = [1,2,3,4,5]
-k_3 = list(range(10, 101, 10))
-
-
-experiment_result3 = {}
-for k in k_3:
-    experiment_result3[k] = {}
-
-    for rs in random_states3:
-        experiment_result3[k][rs] = {}
-
-        for mea in similarity_measures3:
-            print()
-            print(f'==== k: {k} ==== random_state: {rs} ==== measure: {mea} ====')
-            print()
-            cf = CF(data=rd, test_ratio=0.2, random_state=rs, measure=mea, k=k, soso='mean', new=3)
-
-            if mea in ['cos', 'pcc', 'msd', 'jac', 'os']:
-                cf.run_e1()
-                experiment_result3[k][rs][mea] = cf.performance_mae
-            else:
-                cf.run_e2()
-                experiment_result3[k][rs][mea] = cf.performance_mae
-
-
-rd = load_data.user_item_dictionary()
-similarity_measures4 = ['cos','pcc','msd','os']
-random_states4 = [1,2,3,4,5]
-k_4 = list(range(10, 101, 10))
-
-
-experiment_result4 = {}
-for k in k_4:
-    experiment_result4[k] = {}
-
-    for rs in random_states4:
-        experiment_result4[k][rs] = {}
-
-        for mea in similarity_measures4:
-            print()
-            print(f'==== k: {k} ==== random_state: {rs} ==== measure: {mea} ====')
-            print()
-            cf = CF(data=rd, test_ratio=0.2, random_state=rs, measure=mea, k=k, soso='mean', new=0)
-
-            if mea in ['cos', 'pcc', 'msd', 'jac', 'os']:
-                cf.run_e1()
-                experiment_result4[k][rs][mea] = cf.performance_mae
-            else:
-                cf.run_e2()
-                experiment_result4[k][rs][mea] = cf.performance_mae
-
+def experiment(data, test_ratio, random_state, measure, k, soso, new):
+    d = {}
+    for sim in measure:
+        d[sim] = {}
+        for k_ in k:
+            d[sim][k_]={}
+            for rs in random_state:
+                cf = CF(data=data, test_ratio=test_ratio, random_state=rs, measure='os', k=k_, soso=soso, new=new)
                 
-
-# %%
-agg_d = x
-# k-fold aggregation
-agg_d = {}
-s_m = similarity_measures
-for m in s_m:
-    agg_d[m] = {}
-    for i in k_:
-        agg_d[m][i] = 0
-        basket = []
-        for j in random_states:
-            basket.append(experiment_result[i][j][m])
-        agg_d[m][i] = sum(basket) / len(random_states)
+                if sim in ['cos', 'pcc', 'msd', 'jac', 'os']:
+                    cf.run_e1()
+                    d[sim][k_][rs] = cf.mae
+                else:
+                    cf.run_e2()
+                    d[sim][k_][rs] = cf.mae
 
 
+    agg_d = {}   
+    for sim in measure:
+        agg_d[sim] = {}
+        for k_ in k:
+            agg_d[sim][k_] = 0
+            basket = []
+            for rs in random_state:
+                basket.append(d[sim][k_][rs])
+            agg_d[sim][k_] = sum(basket) / len(basket)
+    return d, agg_d
+
+result, result_agg = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['os','so_sig'], k=list(range(10,101,10)), soso=3, new=0)
+
+
+#%%
 # visualization
-for i in agg_d:
-    plt.plot(list(agg_d[i].keys()), list(agg_d[i].values()),
+for i in ['os','os_sig']:
+    plt.plot(list(result_agg[i].keys()), list(result_agg[i].values()),
              ls='--',
              marker='.',
              markersize='7',
@@ -687,26 +553,27 @@ plt.title('5-fold validation')
 plt.ylabel('MAE')
 plt.xlabel('k neighbors')
 
-# write result
-with open('result/e_os1204_os_sig.pos.neg_max.r_d.3(11).pickle', 'wb') as f:
-    pickle.dump(agg_d, f)
+
+#%%
+import datetime
 
 # save result
+with open('result/result_{}.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
+    pickle.dump(agg_d, f)
+
+# load result
 with open('result/e_os1128_desc_mid3_k_100(6).pickle', 'rb') as f:
-    agg = pickle.load(f)
+    past_result2 = pickle.load(f)
 
-x={}
-# combine with pre result
-for m in similarity_measures:
-    x[m] = {}
-    for i in [10,20,30,40,50,60,70,80,90,100]:
-        x[m][i] = agg_d[m][i]
-        agg_d=x
-agg_d = agg
+def combine_result(past, new):
+    for sim in ['os']:
+        past[sim]={}
+        for k in new[sim]:
+            past[sim][k] = new[sim][k]
+            
+    return past
 
-#####
-x={}
-x['os_sig_max_r'] = {}
-agg['os_sig_max'] = {}
-for i in range(10,101,10):
-    x['os_sig_max_r'][i] = agg_d['os_sig'][i]
+agg_d = combine_result(past_result, past_result3)
+    
+    
+    
