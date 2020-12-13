@@ -249,8 +249,16 @@ class CF:
                 for uj in neighbors:
     
                     # compare paper and propose
-                    if self.measure == 'os_sig':
+                    if self.measure == 'os_sig1':
                         self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean(
+                            ui=self.train[ui],
+                            uj=self.train[uj],
+                            N=self.N,
+                            sigmoid_dic=sigmoid_dic_d_3,
+                            max_r=self.max_r)
+                        
+                    if self.measure == 'os_sig2':
+                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean_no_max(
                             ui=self.train[ui],
                             uj=self.train[uj],
                             N=self.N,
@@ -258,7 +266,7 @@ class CF:
                             max_r=self.max_r)
     
                     elif self.measure == 'os_sig_pos':
-                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean(
+                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean_no_max(
                             ui=self.train[ui],
                             uj=self.train[uj],
                             N=self.N,
@@ -266,7 +274,7 @@ class CF:
                             max_r=self.max_r)
     
                     elif self.measure == 'os_sig_neg':
-                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean(
+                        self.sim_d[ui][uj] = sigmoid_mapping.os_sig_no_euclidean_no_max(
                             ui=self.train[ui],
                             uj=self.train[uj],
                             N=self.N,
@@ -516,7 +524,9 @@ def experiment(data, test_ratio, random_state, measure, k, soso, new):
         for k_ in k:
             d[sim][k_]={}
             for rs in random_state:
-                cf = CF(data=data, test_ratio=test_ratio, random_state=rs, measure='os', k=k_, soso=soso, new=new)
+                cf = CF(data=data, test_ratio=test_ratio, random_state=rs, measure=sim, k=k_, soso=soso, new=new)
+                
+                print('-----------------sim = {}  k = {}  rs = {}-------------------------------'.format(sim,k_,rs))
                 
                 if sim in ['cos', 'pcc', 'msd', 'jac', 'os']:
                     cf.run_e1()
@@ -537,8 +547,14 @@ def experiment(data, test_ratio, random_state, measure, k, soso, new):
             agg_d[sim][k_] = sum(basket) / len(basket)
     return d, agg_d
 
-result, result_agg = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['os','so_sig'], k=list(range(10,101,10)), soso=3, new=0)
+result1, result_agg1 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['os_sig1'], k=list(range(10,101,10)), soso=3, new=0)
+result2, result_agg2 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['os_sig2'], k=list(range(10,101,10)), soso=3, new=0)
+result, result_agg = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['os'], k=list(range(10,101,10)), soso=3, new=0)
 
+st, st_agg = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['cos','pcc','msd','os'], k=list(range(10,101,10)), soso=3, new=0)
+st1, st_agg1 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['cos','pcc','msd','os'], k=list(range(10,101,10)), soso=3, new=1)
+st2, st_agg2 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['cos','pcc','msd','os'], k=list(range(10,101,10)), soso=3, new=2)
+st3, st_agg3 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['cos','pcc','msd','os'], k=list(range(10,101,10)), soso=3, new=3)
 
 #%%
 # visualization
@@ -562,15 +578,17 @@ with open('result/result_{}.pickle'.format(str(datetime.datetime.now())[:13]+'ì‹
     pickle.dump(agg_d, f)
 
 # load result
-with open('result/e_os1128_desc_mid3_k_100(6).pickle', 'rb') as f:
-    past_result2 = pickle.load(f)
+with open('e_os1128_desc_mid3_k_100(6).pickle', 'rb') as f:
+    past_result = pickle.load(f)
+
 
 def combine_result(past, new):
-    for sim in ['os']:
-        past[sim]={}
+    sims = set(new.keys()).difference(set(past.keys()))
+    for sim in sims:
+        past[sim] = {}
         for k in new[sim]:
             past[sim][k] = new[sim][k]
-            
+
     return past
 
 agg_d = combine_result(past_result, past_result3)
