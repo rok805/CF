@@ -86,7 +86,7 @@ class CF:
         #  for new rating. 각 user의 평균을 사용하여 rating change. 2
         elif self.new == 2:
             self.new_data = copy.deepcopy(self.train)
-            self.new_data = sigmoid_mapping.new_rating_mean_std_2(self.new_data)  # new rating method
+            self.new_data = sigmoid_mapping.new_rating_mean_sigmoid_2(self.new_data)  # new rating method
     
             for i in self.new_data:
                 for j in self.new_data[i]:
@@ -96,7 +96,7 @@ class CF:
         #  for new rating. 각 user의 평균과 분산을 사용하여 rating change.
         elif self.new == 3:
             self.new_data = copy.deepcopy(self.train)
-            self.new_data = sigmoid_mapping.new_rating_mean_std_3(self.new_data)  # new rating method 2 번째 방법.
+            self.new_data = sigmoid_mapping.new_rating_mean_sigmoid_std_3(self.new_data)  # new rating method 2 번째 방법.
             
             for i in self.new_data:
                 for j in self.new_data[i]:
@@ -173,12 +173,12 @@ class CF:
                             self.new_data[uj],
                             self.N)
                     if self.measure == 'os_new_rating':
-                        self.sim_d[ui][uj] = similarity_methods.os(
+                        self.sim_d[ui][uj] = similarity_methods.os_new_rating(
                             self.new_data[ui],
                             self.new_data[uj],
                             self.N)
                     if self.measure == 'os_new_rating_2times':
-                        self.sim_d[ui][uj] = similarity_methods.os(
+                        self.sim_d[ui][uj] = similarity_methods.os_new_rating_2times(
                             self.new_data[ui],
                             self.new_data[uj],
                             self.N)
@@ -562,6 +562,11 @@ def experiment(data, test_ratio, random_state, measure, k, soso, new):
 st1, st_agg1 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=1)
 st2, st_agg2 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=2)
 st3, st_agg3 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=3)
+
+
+st1, st_agg1 = experiment(data=rd, test_ratio=0.2, random_state=[1], measure=['os_new_rating','os_new_rating_2times'], k=[10], soso=3, new=1)
+st2, st_agg2 = experiment(data=rd, test_ratio=0.2, random_state=[1], measure=['os_new_rating','os_new_rating_2times'], k=[10], soso=3, new=2)
+st3, st_agg3 = experiment(data=rd, test_ratio=0.2, random_state=[1], measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=[10], soso=3, new=3)
 
 #%%
 # visualization

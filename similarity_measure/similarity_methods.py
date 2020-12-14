@@ -147,7 +147,7 @@ def os_new_rating_2times(ui, uj, N):
     basket = []
 
     for c in corated:
-        basket.append(np.exp(- abs(ui[c] - uj[c]) / max(abs(ui[c]), abs(uj[c]))*2))
+        basket.append(np.exp(- abs(ui[c] - uj[c]) / (max(abs(ui[c]), abs(uj[c]))*2)))
     adf = sum(basket) / c_length
 
     return pncr * adf, c_length
