@@ -12,6 +12,7 @@ from load_data import load_data
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import numpy as np
+import datetime
 import random
 import pickle
 import math
@@ -167,6 +168,16 @@ class CF:
                             self.new_data[ui],
                             self.new_data[uj])
                     if self.measure == 'os':
+                        self.sim_d[ui][uj] = similarity_methods.os(
+                            self.new_data[ui],
+                            self.new_data[uj],
+                            self.N)
+                    if self.measure == 'os_new_rating':
+                        self.sim_d[ui][uj] = similarity_methods.os(
+                            self.new_data[ui],
+                            self.new_data[uj],
+                            self.N)
+                    if self.measure == 'os_new_rating_2times':
                         self.sim_d[ui][uj] = similarity_methods.os(
                             self.new_data[ui],
                             self.new_data[uj],
@@ -528,7 +539,7 @@ def experiment(data, test_ratio, random_state, measure, k, soso, new):
                 
                 print('-----------------sim = {}  k = {}  rs = {}-------------------------------'.format(sim,k_,rs))
                 
-                if sim in ['cos', 'pcc', 'msd', 'jac', 'os']:
+                if sim in ['cos', 'pcc', 'msd', 'jac', 'os', 'os_new_rating', 'os_new_rating_2times']:
                     cf.run_e1()
                     d[sim][k_][rs] = cf.mae
                 else:
@@ -547,19 +558,15 @@ def experiment(data, test_ratio, random_state, measure, k, soso, new):
             agg_d[sim][k_] = sum(basket) / len(basket)
     return d, agg_d
 
-result1, result_agg1 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['os_sig1'], k=list(range(10,101,10)), soso=3, new=0)
-result2, result_agg2 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['os_sig2'], k=list(range(10,101,10)), soso=3, new=0)
-result, result_agg = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['os'], k=list(range(10,101,10)), soso=3, new=0)
 
-st, st_agg = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['cos','pcc','msd','os'], k=list(range(10,101,10)), soso=3, new=0)
-st1, st_agg1 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['cos','pcc','msd','os'], k=list(range(10,101,10)), soso=3, new=1)
-st2, st_agg2 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['cos','pcc','msd','os'], k=list(range(10,101,10)), soso=3, new=2)
-st3, st_agg3 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['cos','pcc','msd','os'], k=list(range(10,101,10)), soso=3, new=3)
+st1, st_agg1 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=1)
+st2, st_agg2 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=2)
+st3, st_agg3 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=3)
 
 #%%
 # visualization
-for i in ['os','os_sig']:
-    plt.plot(list(result_agg[i].keys()), list(result_agg[i].values()),
+for i in ['cos','pcc','msd','os']:
+    plt.plot(list(past_result3[i].keys()), list(past_result3[i].values()),
              ls='--',
              marker='.',
              markersize='7',
@@ -571,15 +578,15 @@ plt.xlabel('k neighbors')
 
 
 #%%
-import datetime
+
 
 # save result
 with open('result/result_{}.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
     pickle.dump(agg_d, f)
 
 # load result
-with open('e_os1128_desc_mid3_k_100(6).pickle', 'rb') as f:
-    past_result = pickle.load(f)
+with open('result/result_rating3_2020-12-13 21시35분.pickle', 'rb') as f:
+    past_result3 = pickle.load(f)
 
 
 def combine_result(past, new):
@@ -591,7 +598,7 @@ def combine_result(past, new):
 
     return past
 
-agg_d = combine_result(past_result, past_result3)
+agg_d = combine_result(agg_d, past_result2)
     
     
     

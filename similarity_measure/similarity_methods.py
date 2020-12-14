@@ -105,3 +105,49 @@ def os(ui, uj, N):
     adf = sum(basket) / c_length
 
     return pncr * adf, c_length
+
+
+def os_new_rating(ui, uj, N):
+
+    # PNCR
+    corated = set(ui.keys()).intersection(set(uj.keys()))
+
+    c_length = len(corated)
+
+    if c_length == 0:
+        return 0, c_length
+
+    pncr = np.exp(-(N-c_length)/N)
+
+    # ADF
+
+    basket = []
+
+    for c in corated:
+        basket.append(np.exp(- abs(ui[c] - uj[c]) / max(abs(ui[c]), abs(uj[c]))))
+    adf = sum(basket) / c_length
+
+    return pncr * adf, c_length
+
+
+def os_new_rating_2times(ui, uj, N):
+
+    # PNCR
+    corated = set(ui.keys()).intersection(set(uj.keys()))
+
+    c_length = len(corated)
+
+    if c_length == 0:
+        return 0, c_length
+
+    pncr = np.exp(-(N-c_length)/N)
+
+    # ADF
+
+    basket = []
+
+    for c in corated:
+        basket.append(np.exp(- abs(ui[c] - uj[c]) / max(abs(ui[c]), abs(uj[c]))*2))
+    adf = sum(basket) / c_length
+
+    return pncr * adf, c_length

@@ -127,31 +127,31 @@ def new_rating_mean_1(data):
         m = np.mean(list(data[i].values()))  # user's mean
 
         for item in data[i]:  # user i's items
-            data[i][item] = round((data[i][item] - m) / m, 5)
+            data[i][item] = round(data[i][item] - m / m, 5)
 
     return data
 
 
-def new_rating_mean_std_2(data):
+def new_rating_mean_sigmoid_2(data):
 
     for i in data:  # users
         m = np.mean(list(data[i].values()))  # user's mean
         s = np.std(list(data[i].values()))  # user's std
 
         for item in data[i]:  # user i's items
-            data[i][item] = round(1 / (1 + np.exp(- data[i][item] + m)) - 0.5, 5)
+            data[i][item] = round(1 / (1 + np.exp(-data[i][item] + m)) - 0.5, 5)
 
     return data
 
 
-def new_rating_mean_std_3(data):
+def new_rating_mean_sigmoid_std_3(data): # 다시하세요.
 
     for i in data:  # users
         m = np.mean(list(data[i].values()))  # user's mean
         s = np.std(list(data[i].values()))  # user's std
 
         for item in data[i]:  # user i's items
-            data[i][item] = round(1 / (1 + np.exp(- data[i][item] + m)) - 0.5, 5) / s**2
+            data[i][item] = round(1 / (1 + np.exp(-data[i][item] + m)) - 0.5, 5) / (1+s**2)
 
     return data
 
@@ -251,8 +251,9 @@ def os_sig_no_euclidean(ui, uj, N, sigmoid_dic, max_r):
     # ADF
     dist = []
     for c in corated_item:
-
-        dist.append(np.exp(- (abs(ui[c] - uj[c]) / max(ui[c], uj[c])) ))
+        a = sigmoid_dic[ui[c]]
+        b = sigmoid_dic[uj[c]]
+        dist.append(np.exp(- (abs(a - b) / max(a, b)) ))
 
     adf = sum(dist) / c_length
 
@@ -273,8 +274,9 @@ def os_sig_no_euclidean_no_max(ui, uj, N, sigmoid_dic, max_r):
     # ADF
     dist = []
     for c in corated_item:
-
-        dist.append(np.exp(- (abs(ui[c] - uj[c]) / max_r) ))
+        a = sigmoid_dic[ui[c]]
+        b = sigmoid_dic[uj[c]]
+        dist.append(np.exp(- (abs(a - b) / max_r) ))
 
     adf = sum(dist) / c_length
 
