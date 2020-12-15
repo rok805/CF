@@ -21,11 +21,12 @@ import time
 
 class CF:
 
-    def __init__(self, data, test_ratio, random_state, measure, k, soso=3, new=0):
+    def __init__(self, data, test_ratio, CV, measure, k, soso=3, new=0):
         self.data = data
         self.new_data = None
         self.test_ratio = test_ratio
-        self.random_state = random_state
+        self.CV = CV
+        self.cv = 0
         self.measure = measure
         self.k = k
         self.mid = soso
@@ -36,14 +37,38 @@ class CF:
         
         self.max_r = max(self.ratings_list)
 
-        #  for new_rating_mean method
-        self.max_r_new = set()
+
+
+    def cv_div(self,x):
+        idx = list(range(len(x)))
+        div = len(x) // self.CV + 1
+        div_mok = len(idx) // self.CV
+        can = []
+
+        if div-div_mok > 0:
+            over = len(idx) - div_mok * 5
+
+        for i in range(over):
+            tmp=[]
+            for j in range(div_mok + 1):
+                tmp.append(idx.pop())
+            can.append(tmp) 
+
+        while idx:
+            tmp=[]
+            for i in range(div_mok):
+                tmp.append(idx.pop())
+            can.append(tmp)
+        return can
 
 
     # train/test split
     def train_test_split(self):
+        
+        #  for new_rating_mean method
+        self.max_r_new = set()
 
-        print('-----train test split-----')
+        print('--------------------train test split-------------------------')
         print()
 
         self.train = {}
@@ -52,14 +77,17 @@ class CF:
         for user in self.data:
 
             item_rate = list(self.data[user].items())
-            random.Random(self.random_state).shuffle(item_rate)
+            random.Random(7777).shuffle(item_rate)
             length = len(item_rate)
-            cri = int(length * (1-0.2))
 
-            self.train[user] = {i: r for i, r in item_rate[:cri]}
-            self.test[user] = {i: r for i, r in item_rate[cri:]}
+            basket = self.cv_div(item_rate)[self.cv]
 
-        # the number of ratings in train set.
+            self.train[user] = {item_rate[i][0]:item_rate[i][1] for i in range(length) if i not in basket}
+            self.test[user] = {item_rate[i][0]:item_rate[i][1] for i in range(length) if i in basket}
+
+        self.cv+=1
+
+        # the number of ratings in train set. for sim_PNCR
         self.N = []
         for i in self.train:
             self.N.extend(list(self.train[i].keys()))
@@ -73,7 +101,7 @@ class CF:
             self.mid = np.mean(self.mid)
 
 
-        #  for new rating. 각 user의 평균을 사용하여 rating change.
+        #  for new rating. 각 user의 평균을 사용하여 rating change. 1
         if self.new == 1:
             self.new_data = copy.deepcopy(self.train)
             self.new_data = sigmoid_mapping.new_rating_mean_1(self.new_data)  # new rating method
@@ -93,7 +121,7 @@ class CF:
                     self.max_r_new.add(self.new_data[i][j])
             self.max_r_new = max(self.max_r_new)
         
-        #  for new rating. 각 user의 평균과 분산을 사용하여 rating change.
+        #  for new rating. 각 user의 평균과 분산을 사용하여 rating change. 3
         elif self.new == 3:
             self.new_data = copy.deepcopy(self.train)
             self.new_data = sigmoid_mapping.new_rating_mean_sigmoid_std_3(self.new_data)  # new rating method 2 번째 방법.
@@ -110,7 +138,7 @@ class CF:
     # traditional similarity
     def trad_similarity(self):
 
-        print('-----traditional {} similarity calculation-----'.format(self.measure))
+        print('--------------------traditional {} similarity calculation--------------------'.format(self.measure))
         print()
 
         users = self.train.keys()
@@ -188,7 +216,7 @@ class CF:
     # proposed similarity
     def prop_similarity(self):
 
-        print('-----proposed {} similarity calculation-----'.format(self.measure))
+        print('--------------------proposed {} similarity calculation--------------------'.format(self.measure))
         print()
 
         users = self.train.keys()  # whole users
@@ -384,7 +412,7 @@ class CF:
     # predict using knn with mean.
     def predict_kNN_Mean(self):
 
-        print('----- predict knn mean-----')
+        print('-------------------- predict knn mean--------------------')
         print()
 
         self.predict_d = {}  # result
@@ -424,7 +452,7 @@ class CF:
     # predict using knn with basic
     def predict_kNN_Basic(self):
 
-        print('----- predict knn basic-----')
+        print('-------------------- predict knn basic--------------------')
         print()
 
         self.predict_d = {}  # result
@@ -467,7 +495,7 @@ class CF:
     # MAE performance calculation
     def performance_mae(self):
 
-        print('----- performance mae calculation-----')
+        print('-------------------- performance mae calculation--------------------')
         print()
 
         users = self.data.keys()  # whole users
@@ -487,7 +515,7 @@ class CF:
     # baseline performance calculation
     def performance_mae_baseline(self):
 
-        print('----- performance mae baseline-----')
+        print('-------------------- performance mae baseline--------------------')
         print()
 
         users = self.test.keys()  # whole users
@@ -524,27 +552,30 @@ class CF:
         return self.mae
 
 
+
 #%%
 
 rd = load_data.user_item_dictionary()
 
-def experiment(data, test_ratio, random_state, measure, k, soso, new):
+def experiment(data, test_ratio, cv, measure, k, soso, new):
     d = {}
     for sim in measure:
         d[sim] = {}
         for k_ in k:
             d[sim][k_]={}
-            for rs in random_state:
-                cf = CF(data=data, test_ratio=test_ratio, random_state=rs, measure=sim, k=k_, soso=soso, new=new)
-                
-                print('-----------------sim = {}  k = {}  rs = {}-------------------------------'.format(sim,k_,rs))
+
+            cf = CF(data=data, test_ratio=test_ratio, CV=cv, measure=sim, k=k_, soso=soso, new=new)
+
+            for cv_ in range(cv):
+
+                print('-----------------sim = {}  k = {}  cv = {}-------------------------------'.format(sim,k_,cv_+1))
                 
                 if sim in ['cos', 'pcc', 'msd', 'jac', 'os', 'os_new_rating', 'os_new_rating_2times']:
                     cf.run_e1()
-                    d[sim][k_][rs] = cf.mae
+                    d[sim][k_][cv_] = cf.mae
                 else:
                     cf.run_e2()
-                    d[sim][k_][rs] = cf.mae
+                    d[sim][k_][cv_] = cf.mae
 
 
     agg_d = {}   
@@ -553,20 +584,24 @@ def experiment(data, test_ratio, random_state, measure, k, soso, new):
         for k_ in k:
             agg_d[sim][k_] = 0
             basket = []
-            for rs in random_state:
-                basket.append(d[sim][k_][rs])
+            for cv_ in range(cv):
+                basket.append(d[sim][k_][cv_])
             agg_d[sim][k_] = sum(basket) / len(basket)
     return d, agg_d
 
+# 5-fold-CV
 
-st1, st_agg1 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=1)
-st2, st_agg2 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=2)
-st3, st_agg3 = experiment(data=rd, test_ratio=0.2, random_state=[1,2,3,4,5], measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=3)
+# 실험 1.
+e_os, e_os_agg = experiment(data=rd, test_ratio=0.2, cv=5, measure=['os'], k=list(range(10,101,10)), soso=3, new=0)
+e_os1, e_os_agg1 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['os_sig1'], k=list(range(10,101,10)), soso=3, new=0)
+e_os2, e_os_agg2 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['os_sig2'], k=list(range(10,101,10)), soso=3, new=0)
 
+# 실험 2.
+st, st_agg = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os'], k=list(range(10,101,10)), soso=3, new=0)
+st1, st_agg1 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=1)
+st2, st_agg2 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=2)
+st3, st_agg3 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=3)
 
-st1, st_agg1 = experiment(data=rd, test_ratio=0.2, random_state=[1], measure=['os_new_rating','os_new_rating_2times'], k=[10], soso=3, new=1)
-st2, st_agg2 = experiment(data=rd, test_ratio=0.2, random_state=[1], measure=['os_new_rating','os_new_rating_2times'], k=[10], soso=3, new=2)
-st3, st_agg3 = experiment(data=rd, test_ratio=0.2, random_state=[1], measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=[10], soso=3, new=3)
 
 #%%
 # visualization
@@ -586,8 +621,8 @@ plt.xlabel('k neighbors')
 
 
 # save result
-with open('result/result_{}.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
-    pickle.dump(agg_d, f)
+with open('result/result_{}_rating3_2times.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
+    pickle.dump(st_agg3, f)
 
 # load result
 with open('result/result_rating3_2020-12-13 21시35분.pickle', 'rb') as f:

@@ -136,7 +136,6 @@ def new_rating_mean_sigmoid_2(data):
 
     for i in data:  # users
         m = np.mean(list(data[i].values()))  # user's mean
-        s = np.std(list(data[i].values()))  # user's std
 
         for item in data[i]:  # user i's items
             data[i][item] = round(1 / (1 + np.exp(-data[i][item] + m)) - 0.5, 5)
@@ -144,7 +143,7 @@ def new_rating_mean_sigmoid_2(data):
     return data
 
 
-def new_rating_mean_sigmoid_std_3(data): # 다시하세요.
+def new_rating_mean_sigmoid_std_3(data):
 
     for i in data:  # users
         m = np.mean(list(data[i].values()))  # user's mean
