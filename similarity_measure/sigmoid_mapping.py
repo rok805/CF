@@ -143,6 +143,17 @@ def new_rating_mean_sigmoid_2(data):
     return data
 
 
+def new_rating_mean_sigmoid_2_1(data):
+
+    for i in data:  # users
+        m = np.mean(list(data[i].values()))  # user's mean
+
+        for item in data[i]:  # user i's items
+            data[i][item] = round(1 / (1 + np.exp(-data[i][item] + m)) - 0.5, 5) * 0.5
+
+    return data
+
+
 def new_rating_mean_sigmoid_std_3(data):
 
     for i in data:  # users
@@ -151,6 +162,18 @@ def new_rating_mean_sigmoid_std_3(data):
 
         for item in data[i]:  # user i's items
             data[i][item] = round(1 / (1 + np.exp(-data[i][item] + m)) - 0.5, 5) / (1+s**2)
+
+    return data
+
+
+def new_rating_mean_sigmoid_std_3_1(data):
+
+    for i in data:  # users
+        m = np.mean(list(data[i].values()))  # user's mean
+        s = np.std(list(data[i].values()))  # user's std
+
+        for item in data[i]:  # user i's items
+            data[i][item] = round(1 / (1 + np.exp(-data[i][item] + m)) - 0.5, 5) / ((1+s**2)*2)
 
     return data
 

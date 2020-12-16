@@ -130,6 +130,26 @@ class CF:
                 for j in self.new_data[i]:
                     self.max_r_new.add(self.new_data[i][j])
             self.max_r_new = max(self.max_r_new)
+            
+        #  for new rating. 각 user의 평균을 사용하여 rating change. 4
+        elif self.new == 4:
+            self.new_data = copy.deepcopy(self.train)
+            self.new_data = sigmoid_mapping.new_rating_mean_sigmoid_2_1(self.new_data)  # new rating method 2 번째 방법.
+            
+            for i in self.new_data:
+                for j in self.new_data[i]:
+                    self.max_r_new.add(self.new_data[i][j])
+            self.max_r_new = max(self.max_r_new)
+            
+        #  for new rating. 각 user의 평균과 분산을 사용하여 rating change. 5
+        elif self.new == 5:
+            self.new_data = copy.deepcopy(self.train)
+            self.new_data = sigmoid_mapping.new_rating_mean_sigmoid_std_3_1(self.new_data)  # new rating method 2 번째 방법.
+            
+            for i in self.new_data:
+                for j in self.new_data[i]:
+                    self.max_r_new.add(self.new_data[i][j])
+            self.max_r_new = max(self.max_r_new)
     
 
 
@@ -602,11 +622,17 @@ st1, st_agg1 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','m
 st2, st_agg2 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=2)
 st3, st_agg3 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=3)
 
+st4, st_agg4 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=4)
+st5, st_agg5 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=5)
+
+# jaccard similarity.
+jac, jac_agg3 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['jac'], k=list(range(10,101,10)), soso=3, new=0)
+
 
 #%%
 # visualization
-for i in ['cos','pcc','msd','os']:
-    plt.plot(list(past_result3[i].keys()), list(past_result3[i].values()),
+for i in ['os','os_sig1','os_sig2']:
+    plt.plot(list(agg_d[i].keys()), list(agg_d[i].values()),
              ls='--',
              marker='.',
              markersize='7',
@@ -621,8 +647,8 @@ plt.xlabel('k neighbors')
 
 
 # save result
-with open('result/result_{}_rating3_2times.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
-    pickle.dump(st_agg3, f)
+with open('result/result_{}_experiment1.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
+    pickle.dump(agg_d, f)
 
 # load result
 with open('result/result_rating3_2020-12-13 21시35분.pickle', 'rb') as f:
@@ -638,7 +664,6 @@ def combine_result(past, new):
 
     return past
 
-agg_d = combine_result(agg_d, past_result2)
-    
-    
+agg_d = combine_result(agg_d, past_result3)
+
     
