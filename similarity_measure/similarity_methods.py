@@ -9,7 +9,7 @@ import numpy as np
 import math
 
 
-def cosine_similarity(ui, uj):  # uij, uj: dictionary
+def cosine_similarity(ui: dict, uj: dict):  # ui, uj: dictionary
 
     ui_item = set(ui.keys())
     uj_item = set(uj.keys())
@@ -29,7 +29,7 @@ def cosine_similarity(ui, uj):  # uij, uj: dictionary
     return up/down, c_length
 
 
-def PCC_similarity(ui, uj):
+def PCC_similarity(ui: dict, uj: dict):
 
     ui_item = set(ui.keys())
     uj_item = set(uj.keys())
@@ -52,7 +52,7 @@ def PCC_similarity(ui, uj):
         return 0, c_length
 
 
-def MSD_similarity(ui, uj):
+def MSD_similarity(ui: dict, uj: dict):
 
     ui_item = set(ui.keys())
     uj_item = set(uj.keys())
@@ -71,7 +71,7 @@ def MSD_similarity(ui, uj):
     return 1 - up/down, c_length
 
 
-def Jaccard_similarity(ui, uj):
+def Jaccard_similarity(ui: dict, uj: dict):
 
     ui_item = set(ui.keys())
     uj_item = set(uj.keys())
@@ -84,7 +84,7 @@ def Jaccard_similarity(ui, uj):
     return up/down, c_length
 
 
-def os(ui, uj, N):
+def os(ui: dict, uj: dict, N: int):
 
     # PNCR
     corated = set(ui.keys()).intersection(set(uj.keys()))
@@ -107,7 +107,7 @@ def os(ui, uj, N):
     return pncr * adf, c_length
 
 
-def os_new_rating(ui, uj, N):
+def os_new_rating(ui: dict, uj: dict, N: int):
 
     # PNCR
     corated = set(ui.keys()).intersection(set(uj.keys()))
@@ -130,7 +130,7 @@ def os_new_rating(ui, uj, N):
     return pncr * adf, c_length
 
 
-def os_new_rating_2times(ui, uj, N):
+def os_new_rating_2times(ui: dict, uj: dict, N: int):
 
     # PNCR
     corated = set(ui.keys()).intersection(set(uj.keys()))

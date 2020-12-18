@@ -195,6 +195,15 @@ class CF:
                             self.train[ui],
                             self.train[uj],
                             self.N)
+                    if self.measure == 'cos_jac':
+                        cos = similarity_methods.cosine_similarity(
+                            self.train[ui],
+                            self.train[uj])
+                        jac = similarity_methods.Jaccard_similarity(
+                            self.train[ui],
+                            self.train[uj]
+                            )
+                        self.sim_d[ui][uj] = (cos[0] * jac[0], cos[1])
             
             elif self.new != 0:  #  새로운 data 로 유사도를 구함.
                 for uj in neighbors:
@@ -230,6 +239,16 @@ class CF:
                             self.new_data[ui],
                             self.new_data[uj],
                             self.N)
+                    if self.measure == 'cos_jac_new_rating2':
+                        cos = similarity_methods.cosine_similarity(
+                            self.new_data[ui],
+                            self.new_data[uj])
+                        jac = similarity_methods.Jaccard_similarity(
+                            self.new_data[ui],
+                            self.new_data[uj]
+                            )
+                        self.sim_d[ui][uj] = (cos[0] * jac[0], cos[1])
+
 
         # return self.sim_d
 
@@ -590,7 +609,7 @@ def experiment(data, test_ratio, cv, measure, k, soso, new):
 
                 print('-----------------sim = {}  k = {}  cv = {}-------------------------------'.format(sim,k_,cv_+1))
                 
-                if sim in ['cos', 'pcc', 'msd', 'jac', 'os', 'os_new_rating', 'os_new_rating_2times']:
+                if sim in ['cos', 'pcc', 'msd', 'jac', 'os', 'os_new_rating', 'os_new_rating_2times', 'cos_jac_new_rating2', 'cos_jac']:
                     cf.run_e1()
                     d[sim][k_][cv_] = cf.mae
                 else:
@@ -621,14 +640,17 @@ st, st_agg = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd
 st1, st_agg1 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=1)
 st2, st_agg2 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=2)
 st3, st_agg3 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=3)
-
 st4, st_agg4 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=4)
 st5, st_agg5 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=5)
 
 # jaccard similarity.
-jac, jac_agg3 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['jac'], k=list(range(10,101,10)), soso=3, new=0)
+jac, jac_agg = experiment(data=rd, test_ratio=0.2, cv=5, measure=['jac'], k=list(range(10,101,10)), soso=3, new=0)
 
+# cosine, jaccard using base rating.
+cj, cj_agg = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos_jac'], k=list(range(10,101,10)), soso=3, new=0)
 
+# cosine, jaccard using new rating2.
+cj, cj_agg = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos_jac_new_rating2'], k=list(range(10,101,10)), soso=3, new=2)
 #%%
 # visualization
 for i in ['os','os_sig1','os_sig2']:
@@ -647,8 +669,8 @@ plt.xlabel('k neighbors')
 
 
 # save result
-with open('result/result_{}_experiment1.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
-    pickle.dump(agg_d, f)
+with open('result/result_{}_cos_jac.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
+    pickle.dump(cj_agg, f)
 
 # load result
 with open('result/result_rating3_2020-12-13 21시35분.pickle', 'rb') as f:

@@ -127,7 +127,17 @@ def new_rating_mean_1(data):
         m = np.mean(list(data[i].values()))  # user's mean
 
         for item in data[i]:  # user i's items
-            data[i][item] = round(data[i][item] - m / m, 5)
+            data[i][item] = round((data[i][item] - m) / m, 5)
+
+    return data
+
+def new_rating_mean_1_1(data):
+
+    for i in data:  # users
+        m = np.mean(list(data[i].values()))  # user's mean
+
+        for item in data[i]:  # user i's items
+            data[i][item] = round(data[i][item] - m, 5)
 
     return data
 
