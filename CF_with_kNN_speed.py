@@ -133,7 +133,7 @@ class CF:
         #  for new rating. 각 user의 평균과 분산을 사용하여 rating change. 3
         elif self.new == 3:
             self.new_data = copy.deepcopy(self.train)
-            self.new_data = sigmoid_mapping.new_rating_mean_sigmoid_std_3(self.new_data)  # new rating method 2 번째 방법.
+            self.new_data = sigmoid_mapping.new_rating_mean_sigmoid_std_3(self.new_data)
             
             for i in self.new_data:
                 for j in self.new_data[i]:
@@ -143,7 +143,7 @@ class CF:
         #  for new rating. 각 user의 평균을 사용하여 rating change. 4
         elif self.new == 4:
             self.new_data = copy.deepcopy(self.train)
-            self.new_data = sigmoid_mapping.new_rating_mean_sigmoid_2_1(self.new_data)  # new rating method 2 번째 방법.
+            self.new_data = sigmoid_mapping.new_rating_mean_sigmoid_2_1(self.new_data)
             
             for i in self.new_data:
                 for j in self.new_data[i]:
@@ -153,7 +153,7 @@ class CF:
         #  for new rating. 각 user의 평균과 분산을 사용하여 rating change. 5
         elif self.new == 5:
             self.new_data = copy.deepcopy(self.train)
-            self.new_data = sigmoid_mapping.new_rating_mean_sigmoid_std_3_1(self.new_data)  # new rating method 2 번째 방법.
+            self.new_data = sigmoid_mapping.new_rating_mean_sigmoid_std_3_1(self.new_data)
             
             for i in self.new_data:
                 for j in self.new_data[i]:
@@ -170,14 +170,12 @@ class CF:
         print('--------------------traditional {} similarity calculation--------------------'.format(self.measure))
         print()
 
-        users = self.train.keys()
+        users = list(self.train.keys())
+        n=1
         self.sim_d = {}
 
-
         for ui in tqdm(users):
-            neighbors = list(users)
-            neighbors.remove(ui)
-
+            neighbors = users[n:]
             self.sim_d[ui] = {}
             
             if self.new == 0:  #  기본적인 data 로 유사도를 구함.
@@ -212,7 +210,8 @@ class CF:
                             self.train[uj]
                             )
                         self.sim_d[ui][uj] = (cos[0] * jac[0], cos[1])
-            
+                n+=1
+
             elif self.new != 0:  #  새로운 data 로 유사도를 구함.
                 for uj in neighbors:
     
@@ -256,7 +255,15 @@ class CF:
                             self.new_data[uj]
                             )
                         self.sim_d[ui][uj] = (cos[0] * jac[0], cos[1])
+                n+=1
 
+        users_r = users[::-1]
+        n=1
+        for ui in users_r:
+            neighbor = users_r[n:]
+            for uj in neighbor:
+                self.sim_d[ui][uj] = self.sim_d[uj][ui]
+            n+=1
 
         # return self.sim_d
 
@@ -266,8 +273,9 @@ class CF:
         print('--------------------proposed {} similarity calculation--------------------'.format(self.measure))
         print()
 
-        users = self.train.keys()  # whole users
+        users = list(self.train.keys())  # whole users
         self.sim_d = {}  # similarity matrics
+        n=1
 
         sigmoid_dic_d = sigmoid_mapping.sigmoid_mapping_d(ratings_list=self.ratings_list,
                                                           mid=self.mid)
@@ -294,9 +302,7 @@ class CF:
 
         if self.new != 0:  #  새로운 데이터를 사용함.
             for ui in tqdm(users):
-                neighbors = list(users)
-                neighbors.remove(ui)
-
+                neighbors = users[n:]
                 self.sim_d[ui] = {}
 
                 for uj in neighbors:
@@ -324,12 +330,11 @@ class CF:
                             N=self.N,
                             sigmoid_dic=sigmoid_dic_d2_2,
                             max_r=self.max_r_new)
+                n+=1
             
         elif self.new == 0:  # 기본 데이터를 사용함.
             for ui in tqdm(users):
-                neighbors = list(users)
-                neighbors.remove(ui)
-    
+                neighbors = users[n:]
                 self.sim_d[ui] = {}
     
                 for uj in neighbors:
@@ -366,7 +371,7 @@ class CF:
                             N=self.N,
                             sigmoid_dic=sigmoid_dic_d2_2,
                             max_r=self.max_r)
-    
+
     ################################################################
                     elif self.measure == 'sig1':
                         self.sim_d[ui][uj] = sigmoid_mapping.sigmoid_mapping_similarity(
@@ -454,6 +459,16 @@ class CF:
                             self.train[ui],
                             self.train[uj])
                         self.sim_d[ui][uj] = (sig[0] * jac[0], sig[1])
+                        
+                n+=1
+
+        users_r = users[::-1]
+        n=1
+        for ui in users_r:
+            neighbor = users_r[n:]
+            for uj in neighbor:
+                self.sim_d[ui][uj] = self.sim_d[uj][ui]
+            n+=1
         # return self.sim_d
 
     # predict using knn with mean.
@@ -640,10 +655,15 @@ def experiment(data, test_ratio, cv, measure, k, soso, new):
 # 5-fold-CV
 
 # 실험 1.
-e_os, e_os_agg = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos'], k=[10], soso=3, new=0)
-
+e_os, e_os_agg = experiment(data=rd, test_ratio=0.2, cv=5, measure=['os'], k=list(range(10,101,10)), soso=3, new=2)
 e_os1, e_os_agg1 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['os_sig1'], k=list(range(10,101,10)), soso=3, new=0)
 e_os2, e_os_agg2 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['os_sig2'], k=list(range(10,101,10)), soso=3, new=0)
+
+# 실험 1. 1M data set
+e_os, e_os_agg = experiment(data=rd_1m, test_ratio=0.2, cv=5, measure=['os'], k=[10], soso=3, new=2)
+e_os1, e_os_agg1 = experiment(data=rd_1m, test_ratio=0.2, cv=5, measure=['os_sig1'], k=list(range(10,101,10)), soso=3, new=0)
+e_os2, e_os_agg2 = experiment(data=rd_1m, test_ratio=0.2, cv=5, measure=['os_sig2'], k=list(range(10,101,10)), soso=3, new=0)
+
 
 # 실험 2.
 st, st_agg = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os'], k=list(range(10,101,10)), soso=3, new=0)
@@ -653,6 +673,27 @@ st2, st_agg2 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','m
 st3, st_agg3 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=3)
 st4, st_agg4 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=4)
 st5, st_agg5 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=5)
+
+# 실험 2. 1M data set
+# 기존 유사도 성능.
+st_cos, st_agg_cos = experiment(data=rd_1m, test_ratio=0.2, cv=5, measure=['cos'], k=list(range(10,101,10)), soso=3, new=0)
+st_pcc, st_agg_pcc = experiment(data=rd_1m, test_ratio=0.2, cv=5, measure=['pcc'], k=list(range(10,101,10)), soso=3, new=0)
+st_msd, st_agg_msd = experiment(data=rd_1m, test_ratio=0.2, cv=5, measure=['msd'], k=list(range(10,101,10)), soso=3, new=0)
+st_os, st_agg_os = experiment(data=rd_1m, test_ratio=0.2, cv=5, measure=['os'], k=list(range(10,101,10)), soso=3, new=0)
+
+# new_rating2 사용한 기존 유사도 성능.
+st_cos_n2, st_agg_cos_n2 = experiment(data=rd_1m, test_ratio=0.2, cv=5, measure=['cos'], k=list(range(10,101,10)), soso=3, new=2)
+st_pcc_n2, st_agg_pcc_n2 = experiment(data=rd_1m, test_ratio=0.2, cv=5, measure=['pcc'], k=list(range(10,101,10)), soso=3, new=2)
+st_msd_n2, st_agg_msd_n2 = experiment(data=rd_1m, test_ratio=0.2, cv=5, measure=['msd'], k=list(range(10,101,10)), soso=3, new=2)
+st_os_n2, st_agg_os_n2 = experiment(data=rd_1m, test_ratio=0.2, cv=5, measure=['os_new_rating'], k=list(range(10,101,10)), soso=3, new=2)
+
+
+st1, st_agg1 = experiment(data=rd_1m, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=1)
+st1_1, st_agg1_1 = experiment(data=rd_1m, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=1.5)
+st2, st_agg2 = experiment(data=rd_1m, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=2)
+st3, st_agg3 = experiment(data=rd_1m, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=3)
+st4, st_agg4 = experiment(data=rd_1m, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=4)
+st5, st_agg5 = experiment(data=rd_1m, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=5)
 
 
 # jaccard similarity.
