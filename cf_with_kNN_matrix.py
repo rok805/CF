@@ -4,37 +4,336 @@ Created on Thu Dec 17 17:09:52 2020
 
 @author: user
 """
+
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.sparse import csr_matrix, csc_matrix
-from load_data import load_data
+from numpy.linalg import norm
+from tqdm import tqdm
 import pandas as pd
 import numpy as np
+import random
+
+from load_data import data_load
 
 
-rd = load_data.user_item_dictionary()
-rd_1m = load_data.user_item_dictionary_1M()
+# 데이터 로드하기.
 
-users=[]
-items=[]
-ratings=[]
+data = data_load.create_rating()
+# data_1m = data_load.create_rating_1M()
 
-for user in rd_1m:
-    for item in rd_1m[user]:
-        users.append(user)
-        items.append(item)
-        ratings.append(rd_1m[user][item])
+data_d = data_load.create_rating_dic()
+# data_1m_d = data_load.create_rating_dic_1M()
 
-rating_matrix = csr_matrix((ratings, (users, items)))
+##############################################################################
 
-global_mean = np.mean(ratings)
+class CFwithKnn:
+    
+    def __init__(self, data, data_d, k, CV, sim):
+        self.data = data
+        self.data_d = data_d
+        self.k = k
+        self.CV = CV
+        self.cv = 0
+        self.sim = sim
+        self.mid=3
+        
+        self.rating_list = set(self.data['rating']) # unique ratings.
 
-# 유사도 행렬을 만드는 과정.
+    # 1. train/test set 분리하기.
+    # test set 으로 분리될 평점.
+    def cv_div(self, x):
+        idx = list(range(len(x)))
+        div = len(x) // self.CV + 1
+        div_mok = len(idx) // self.CV
+        can = []
+    
+        if div-div_mok > 0:
+            over = len(idx) - div_mok * self.CV
+    
+        for i in range(over):
+            tmp=[]
+            for j in range(div_mok + 1):
+                tmp.append(idx.pop())
+            can.append(tmp) 
+    
+        while idx:
+            tmp=[]
+            for i in range(div_mok):
+                tmp.append(idx.pop())
+            can.append(tmp)
+        return can
 
-similarity_matrix_sk = cosine_similarity(rating_matrix)
 
-df = pd.DataFrame(similarity_matrix)
+    def train_test_split(self):
+        print()
+        print('========================== split data set =================================')
+        print('=========================cv: {}=========================='.format(self.cv+1))
 
-# user 별로 돌고, 또 user 별로 돌면서 corated를 찾으면서, similarity 를 계산한다. 
+        self.train_d = {}
+        self.test_d = {}
+    
+        for user in self.data_d:
+    
+            item_ = list(self.data_d[user].items())
+            random.Random(7777).shuffle(item_)
+            length = len(item_)
+    
+            basket = self.cv_div(item_)[self.cv]
+    
+            self.train_d[user] = {item_[i][0]:item_[i][1] for i in range(length) if i not in basket}
+            self.test_d[user] = {item_[i][0]:item_[i][1] for i in range(length) if i in basket}
+    
+        
+        # user 별 평균 점수 딕셔너리 생성.
+        self.data_mean = {}
+        for i in self.train_d:
+            self.data_mean[i] = np.mean(list(self.train_d[i].values()))
+            
+        self.cv+=1
 
-for i in :
-csr_matrix.
+
+
+##############################################################################
+
+
+    # matrix 생성을 위한 index 추출하기.
+    def make_matrix(self):
+        users=[]
+        items=[]
+        ratings=[]
+        
+        for user in self.train_d:
+            for item in self.train_d[user]:
+                users.append(user)
+                items.append(item)
+                ratings.append(self.data_d[user][item])
+    
+        # row, column index를 0부터 시작하게 함.    
+        users = np.array(users)
+        items = np.array(items)
+    
+        self.data_csr_matrix = csr_matrix((ratings, (users, items)))
+        self.data_matrix = self.data_csr_matrix.toarray()
+    
+        
+
+
+
+##############################################################################
+    
+    # 실험 1을 위한 rating mapping.
+    
+    
+    def sigmoid_mapping(self):
+    
+        self.sigmoid_dic = {}
+    
+        for i in self.rating_list:
+            self.sigmoid_dic[i] = 1 / (1 + np.exp(-i + self.mid))
+
+
+##############################################################################
+
+    
+    # 유사도 지표.
+    def cosine(self, ui, uj):
+        up = np.dot(ui,uj)
+        down = norm(ui)*norm(uj)
+        
+        try:
+            return up/down
+        except:
+            return 0
+    
+    def pearson_correlation(self, ui, uj, mi, mj):
+        up = np.multiply((ui-mi),(uj-mj)).sum()
+        down = norm((ui-mi))*norm((uj-mj))
+        
+        try:
+            return up / down
+        except:
+            return 0
+        
+    def mean_squared_difference(self, ui, uj):
+        up = ((ui-uj)**2).sum()
+        down = len(ui)
+        
+        try:
+            return 1 - up/down
+        except:
+            return 0
+    
+    def pairwise_max(self, a, b):
+        if a > b:
+            return a
+        else:
+            return b  
+        
+    def os(self, ui, uj):
+        #PNCR
+        pncr = np.exp(-(item_length-len(ui))/item_length)
+    
+        #ADF
+        vfunc = np.vectorize(self.pairwise_max)
+        adf = (np.exp(-abs(ui-uj)/vfunc(ui,uj))).sum() / len(ui)
+        try:
+            return pncr * adf
+        except:
+            return pncr * adf
+    
+    def os_sig(self, ui, uj):
+        #PNCR
+        pncr = np.exp(-(self.item_length-len(ui))/self.item_length)
+        ui2 = np.array([sigmoid_dic[i] for i in ui])
+        uj2 = np.array([sigmoid_dic[j] for j in uj])
+    
+        #ADF
+        adf = (np.exp(-abs(ui2-uj2)/max(self.rating_list))).sum() / len(ui2)
+    
+        try:
+            return pncr * adf
+        except:
+            return pncr * adf
+
+
+##############################################################################
+    # 유사도 행렬 만들기.
+    
+    def similarity_calculation(self):
+        print()
+        print('========================== similarity =================================')
+        print('========================== similarity:{}  k:{}========================='.format(self.sim, self.k))
+
+
+        self.user_length = len(self.train_d)               # 총 user 수.
+        self.item_length = len(set(self.data['movieId'])) # 총 item 수.
+        users = list(range(self.user_length))        # user ID.
+        n = 1
+        
+        self.sim_mat = np.zeros((self.user_length, self.user_length), dtype=float) # 유사도 행렬.
+        
+        for user in tqdm(users):
+            neighbor = users[n:]
+            n+=1
+            for nei in neighbor:
+                co_item = np.array(list(set(self.train_d[user].keys()).intersection(set(self.train_d[nei].keys()))))
+        
+                if self.sim == 'cos':
+                    try:
+                        self.sim_mat[user][nei] = self.cosine(ui=self.data_matrix[user,co_item],
+                                                    uj=self.data_matrix[nei,co_item])
+                    except IndexError:
+                        self.sim_mat[user][nei] = 0
+        
+                elif self.sim == 'pcc':
+                    try:
+                        self.sim_mat[user][nei] = self.pearson_correlation(ui=self.data_matrix[user,co_item],
+                                                                           uj=self.data_matrix[nei,co_item],
+                                                                           mi=self.data_mean[user],
+                                                                           mj=self.data_mean[nei])
+                    except IndexError:
+                        self.sim_mat[user][nei] = 0
+                
+                elif self.sim == 'msd':
+                    try:
+                        self.sim_mat[user][nei] = self.mean_squared_difference(ui=self.data_matrix[user,co_item],
+                                                                               uj=self.data_matrix[nei,co_item])
+                    except IndexError:
+                        self.sim_mat[user][nei] = 0
+                        
+                elif self.sim == 'jac':
+                    try:
+                        self.sim_mat[user][nei] = len(co_item) / len(set(self.train_d[user].keys()).union(set(self.train_d[nei].keys())))
+                    except IndexError:
+                        self.sim_mat[user][nei] = 0
+        
+                elif self.sim == 'os':
+                    try:
+                        self.sim_mat[user][nei] = self.os(ui=self.data_matrix[user,co_item],
+                                                                 uj=self.data_matrix[nei,co_item])
+                    except IndexError:
+                        self.sim_mat[user][nei] = 0
+                        
+                elif self.sim == 'os_sig':
+                    try:
+                        self.sim_mat[user][nei] = self.os_sig(ui=self.data_matrix[user,co_item],
+                                                    uj=self.data_matrix[nei,co_item])
+                    except IndexError:
+                        self.sim_mat[user][nei] = 0
+        
+        # 유사도 행렬 lower triangle 부분 채워넣기.
+        users_r = users[::-1]
+        n=1
+        for ui in users_r:
+            neighbor = users_r[n:]
+            n+=1
+            for uj in neighbor:
+                self.sim_mat[ui][uj] = self.sim_mat[uj][ui]
+
+
+
+##############################################################################
+    
+    # 예측 평점 만들기.
+    def predict(self):
+        print()
+        print('========================== predict =================================')
+        print('========================== similarity:{}  k:{}========================='.format(self.sim, self.k))
+        users = list(self.test_d.keys())
+        error = []
+        for user in tqdm(users):
+            # k-neighbor
+            k_neighbor_sim = sorted(self.sim_mat[user,:], reverse=True)[:self.k]
+            k_neighbor_id = np.argsort(self.sim_mat[user,:])[::-1][:self.k]
+            prediction=[]
+            real=[]
+            for no_rate_i, no_rate_r in self.test_d[user].items(): # 평점을 매기지 않은 아이템 중에서
+                up=[]
+                down=[]
+                
+                for nei_sim, nei_id in zip(k_neighbor_sim, k_neighbor_id): # k 이웃들에 대해
+                    if no_rate_i in self.train_d[nei_id].keys(): # 평점을 매겼으면 예측에 사용.
+                        up.append(nei_sim*(self.train_d[nei_id][no_rate_i]-self.data_mean[nei_id]))
+                        down.append(nei_sim)
+                try:
+                    weight = sum(up)/sum(down)
+                except:
+                    weight = 0
+                pred = self.data_mean[user] + weight
+                prediction.append(pred)
+                real.append(no_rate_r)
+                
+            e = [abs(i-j) for i,j in zip(prediction, real)]
+            error.extend(e)
+        
+        mae = sum(error)/len(error)
+        return mae
+
+    
+    def run(self):
+        
+        cv_result = []
+        
+        for i in range(self.CV):
+            
+            self.train_test_split()
+            self.make_matrix()
+            self.sigmoid_mapping()
+            self.similarity_calculation()
+            cv_result.append(self.predict())
+        
+        return np.mean(cv_result)
+
+CV=5
+
+result = {}
+for sim in ['cos']:
+    result[sim]={}
+    for k in [10]:
+        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim)
+        result[sim][k]=cf.run()
+
+
+
+
+
