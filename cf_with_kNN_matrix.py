@@ -5,13 +5,18 @@ Created on Thu Dec 17 17:09:52 2020
 @author: user
 """
 
-from sklearn.metrics.pairwise import cosine_similarity
+
+#%% class 
+
 from scipy.sparse import csr_matrix, csc_matrix
 from numpy.linalg import norm
 from tqdm import tqdm
 import pandas as pd
 import numpy as np
+import datetime
 import random
+import pickle
+import math
 
 from load_data import data_load
 
@@ -146,20 +151,32 @@ class CFwithKnn:
             return 0
     
     def pearson_correlation(self, ui, uj, mi, mj):
+        if len(ui) < 2:
+            return 0
         up = np.multiply((ui-mi),(uj-mj)).sum()
         down = norm((ui-mi))*norm((uj-mj))
         
         try:
-            return up / down
+            s = up / down
+            if not math.isnan(s):
+                return s
+            else:
+                return 0
         except:
             return 0
         
     def mean_squared_difference(self, ui, uj):
+        if len(ui) < 2:
+            return 0
         up = ((ui-uj)**2).sum()
         down = len(ui)
         
         try:
-            return 1 - up/down
+            s = 1 - up/down
+            if not math.isnan(s):
+                return s
+            else:
+                return 0
         except:
             return 0
     
@@ -171,7 +188,7 @@ class CFwithKnn:
         
     def os(self, ui, uj):
         #PNCR
-        pncr = np.exp(-(item_length-len(ui))/item_length)
+        pncr = np.exp(-(self.item_length-len(ui))/self.item_length)
     
         #ADF
         vfunc = np.vectorize(self.pairwise_max)
@@ -184,8 +201,8 @@ class CFwithKnn:
     def os_sig(self, ui, uj):
         #PNCR
         pncr = np.exp(-(self.item_length-len(ui))/self.item_length)
-        ui2 = np.array([sigmoid_dic[i] for i in ui])
-        uj2 = np.array([sigmoid_dic[j] for j in uj])
+        ui2 = np.array([self.sigmoid_dic[i] for i in ui])
+        uj2 = np.array([self.sigmoid_dic[j] for j in uj])
     
         #ADF
         adf = (np.exp(-abs(ui2-uj2)/max(self.rating_list))).sum() / len(ui2)
@@ -281,6 +298,7 @@ class CFwithKnn:
         print('========================== similarity:{}  k:{}========================='.format(self.sim, self.k))
         users = list(self.test_d.keys())
         error = []
+        self.pred_check = []
         for user in tqdm(users):
             # k-neighbor
             k_neighbor_sim = sorted(self.sim_mat[user,:], reverse=True)[:self.k]
@@ -300,9 +318,13 @@ class CFwithKnn:
                 except:
                     weight = 0
                 pred = self.data_mean[user] + weight
-                prediction.append(pred)
+                if not math.isnan(pred):
+                    prediction.append(pred)
+                else:
+                    prediction.append(self.data_mean[user])
                 real.append(no_rate_r)
-                
+            
+            self.pred_check.append(prediction)    
             e = [abs(i-j) for i,j in zip(prediction, real)]
             error.extend(e)
         
@@ -323,16 +345,27 @@ class CFwithKnn:
             cv_result.append(self.predict())
         
         return np.mean(cv_result)
+    
+
+#%% experiment
 
 CV=5
 
-result = {}
-for sim in ['cos']:
-    result[sim]={}
-    for k in [10]:
+result_pcc_msd = {}
+for sim in ['pcc','msd']:
+    result_pcc_msd[sim]={}
+    for k in list(range(10,101,10)):
         cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim)
-        result[sim][k]=cf.run()
+        result_pcc_msd[sim][k]=cf.run()
 
+
+# save result
+with open('result/result_{}_pcc_msd.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
+    pickle.dump(result_pcc_msd, f)
+
+# load result
+with open('result/result_2020-12-22 14시53분_traditional.pickle', 'rb') as f:
+    result = pickle.load(f)
 
 
 
