@@ -17,33 +17,39 @@ import datetime
 import random
 import pickle
 import math
+import copy
 
 from load_data import data_load
+from similarity_measure import sigmoid_mapping
 
 
 # 데이터 로드하기.
 
 data = data_load.create_rating()
-# data_1m = data_load.create_rating_1M()
+data_1m = data_load.create_rating_1M()
 
 data_d = data_load.create_rating_dic()
-# data_1m_d = data_load.create_rating_dic_1M()
+data_1m_d = data_load.create_rating_dic_1M()
 
 ##############################################################################
 
 class CFwithKnn:
     
-    def __init__(self, data, data_d, k, CV, sim):
+    def __init__(self, data, data_d, k, CV, sim, new=0):
         self.data = data
+        self.new_data = None
+        self.new_data_d = None
         self.data_d = data_d
         self.k = k
         self.CV = CV
         self.cv = 0
         self.sim = sim
-        self.mid=3
+        self.mid = 3
+        self.new = new
         
         self.rating_list = set(self.data['rating']) # unique ratings.
-
+        self.max_r_new = max(self.rating_list)
+        
     # 1. train/test set 분리하기.
     # test set 으로 분리될 평점.
     def cv_div(self, x):
@@ -88,15 +94,79 @@ class CFwithKnn:
             self.train_d[user] = {item_[i][0]:item_[i][1] for i in range(length) if i not in basket}
             self.test_d[user] = {item_[i][0]:item_[i][1] for i in range(length) if i in basket}
     
-        
+        self.cv+=1
+
+
         # user 별 평균 점수 딕셔너리 생성.
         self.data_mean = {}
         for i in self.train_d:
             self.data_mean[i] = np.mean(list(self.train_d[i].values()))
+
+        # new rating setting.
+        if self.new != 0:
+
+            if self.new == 1:
+                basket=set()
+                self.new_data_d = copy.deepcopy(self.train_d)
+                self.new_data_d = sigmoid_mapping.new_rating_mean_1(self.new_data_d)  # new rating method
+        
+                for i in self.new_data_d:
+                    for j in self.new_data_d[i]:
+                        basket.add(self.new_data_d[i][j])
+                self.max_r_new = max(basket)
+                
+            elif self.new == 1.2:
+                basket=set()
+                self.new_data_d = copy.deepcopy(self.train_d)
+                self.new_data_d = sigmoid_mapping.new_rating_mean_1_2(self.new_data_d)  # new rating method
+        
+                for i in self.new_data_d:
+                    for j in self.new_data_d[i]:
+                        basket.add(self.new_data_d[i][j])
+                self.max_r_new = max(basket)
+                
+            elif self.new == 1.3:
+                basket=set()
+                self.new_data_d = copy.deepcopy(self.train_d)
+                self.new_data_d = sigmoid_mapping.new_rating_mean_1_3(self.new_data_d)  # new rating method
+        
+                for i in self.new_data_d:
+                    for j in self.new_data_d[i]:
+                        basket.add(self.new_data_d[i][j])
+                self.max_r_new = max(basket)
+                
+            elif self.new == 2:
+                basket=set()
+                self.new_data_d = copy.deepcopy(self.train_d)
+                self.new_data_d = sigmoid_mapping.new_rating_mean_2(self.new_data_d)  # new rating method
+        
+                for i in self.new_data_d:
+                    for j in self.new_data_d[i]:
+                        basket.add(self.new_data_d[i][j])
+                self.max_r_new = max(basket)
+                
+            elif self.new == 2.2:
+                basket=set()
+                self.new_data_d = copy.deepcopy(self.train_d)
+                self.new_data_d = sigmoid_mapping.new_rating_mean_2_2(self.new_data_d)  # new rating method
+        
+                for i in self.new_data_d:
+                    for j in self.new_data_d[i]:
+                        basket.add(self.new_data_d[i][j])
+                self.max_r_new = max(basket)
+                
+            elif self.new == 2.3:
+                basket=set()
+                self.new_data_d = copy.deepcopy(self.train_d)
+                self.new_data_d = sigmoid_mapping.new_rating_mean_2_3(self.new_data_d)  # new rating method
+        
+                for i in self.new_data_d:
+                    for j in self.new_data_d[i]:
+                        basket.add(self.new_data_d[i][j])
+                self.max_r_new = max(basket)
+
+
             
-        self.cv+=1
-
-
 
 ##############################################################################
 
@@ -107,21 +177,34 @@ class CFwithKnn:
         items=[]
         ratings=[]
         
-        for user in self.train_d:
-            for item in self.train_d[user]:
-                users.append(user)
-                items.append(item)
-                ratings.append(self.data_d[user][item])
-    
-        # row, column index를 0부터 시작하게 함.    
-        users = np.array(users)
-        items = np.array(items)
-    
-        self.data_csr_matrix = csr_matrix((ratings, (users, items)))
-        self.data_matrix = self.data_csr_matrix.toarray()
+        if self.new == 0:
+            for user in self.train_d:
+                for item in self.train_d[user]:
+                    users.append(user)
+                    items.append(item)
+                    ratings.append(self.train_d[user][item])
+        
+            # row, column index를 0부터 시작하게 함.    
+            users = np.array(users)
+            items = np.array(items)
+        
+            self.data_csr_matrix = csr_matrix((ratings, (users, items)))
+            self.data_matrix = self.data_csr_matrix.toarray()
     
         
-
+        else:
+            for user in self.new_data_d:
+                for item in self.new_data_d[user]:
+                    users.append(user)
+                    items.append(item)
+                    ratings.append(self.new_data_d[user][item])
+        
+            # row, column index를 0부터 시작하게 함.    
+            users = np.array(users)
+            items = np.array(items)
+        
+            self.data_csr_matrix = csr_matrix((ratings, (users, items)))
+            self.data_matrix = self.data_csr_matrix.toarray()
 
 
 ##############################################################################
@@ -142,17 +225,24 @@ class CFwithKnn:
     
     # 유사도 지표.
     def cosine(self, ui, uj):
+        if len(ui) < 2:
+            return 0
+        
         up = np.dot(ui,uj)
         down = norm(ui)*norm(uj)
         
         try:
-            return up/down
+            if not math.isnan(up/down):
+                return up/down
+            else:
+                return 0
         except:
             return 0
     
     def pearson_correlation(self, ui, uj, mi, mj):
         if len(ui) < 2:
             return 0
+        
         up = np.multiply((ui-mi),(uj-mj)).sum()
         down = norm((ui-mi))*norm((uj-mj))
         
@@ -166,8 +256,7 @@ class CFwithKnn:
             return 0
         
     def mean_squared_difference(self, ui, uj):
-        if len(ui) < 2:
-            return 0
+        
         up = ((ui-uj)**2).sum()
         down = len(ui)
         
@@ -205,13 +294,24 @@ class CFwithKnn:
         uj2 = np.array([self.sigmoid_dic[j] for j in uj])
     
         #ADF
-        adf = (np.exp(-abs(ui2-uj2)/max(self.rating_list))).sum() / len(ui2)
+        adf = (np.exp(-abs(ui2-uj2)/self.max_r_new)).sum() / len(ui2)
     
         try:
             return pncr * adf
         except:
             return pncr * adf
 
+    def os_new_rating(self, ui, uj):
+        #PNCR
+        pncr = np.exp(-(self.item_length-len(ui))/self.item_length)
+    
+        #ADF
+        vfunc = np.vectorize(self.pairwise_max)
+        adf = (np.exp(-abs(ui-uj)/vfunc(abs(ui), abs(uj)))).sum() / len(ui)
+        try:
+            return pncr * adf
+        except:
+            return pncr * adf
 
 ##############################################################################
     # 유사도 행렬 만들기.
@@ -226,9 +326,10 @@ class CFwithKnn:
         self.item_length = len(set(self.data['movieId'])) # 총 item 수.
         users = list(range(self.user_length))        # user ID.
         n = 1
-        
+
         self.sim_mat = np.zeros((self.user_length, self.user_length), dtype=float) # 유사도 행렬.
-        
+
+    
         for user in tqdm(users):
             neighbor = users[n:]
             n+=1
@@ -242,19 +343,31 @@ class CFwithKnn:
                     except IndexError:
                         self.sim_mat[user][nei] = 0
         
-                elif self.sim == 'pcc':
+                elif (self.sim == 'pcc') and (self.new == 0):
                     try:
-                        self.sim_mat[user][nei] = self.pearson_correlation(ui=self.data_matrix[user,co_item],
-                                                                           uj=self.data_matrix[nei,co_item],
-                                                                           mi=self.data_mean[user],
-                                                                           mj=self.data_mean[nei])
+                        self.sim_mat[user][nei] = self.pearson_correlation(
+                            ui=self.data_matrix[user,co_item],
+                            uj=self.data_matrix[nei,co_item],
+                            mi=self.data_mean[user],
+                            mj=self.data_mean[nei])
                     except IndexError:
                         self.sim_mat[user][nei] = 0
+                        
+                elif (self.sim == 'pcc') and (self.new != 0):
+                    try:
+                        self.sim_mat[user][nei] = self.pearson_correlation(
+                            ui=self.data_matrix[user,co_item],
+                            uj=self.data_matrix[nei,co_item],
+                            mi=np.mean(list(self.new_data_d[user].values())),
+                            mj=np.mean(list(self.new_data_d[nei].values())))
+                    except IndexError:
+                        self.sim_mat[user][nei] = 0                        
                 
                 elif self.sim == 'msd':
                     try:
-                        self.sim_mat[user][nei] = self.mean_squared_difference(ui=self.data_matrix[user,co_item],
-                                                                               uj=self.data_matrix[nei,co_item])
+                        self.sim_mat[user][nei] = self.mean_squared_difference(
+                            ui=self.data_matrix[user,co_item],
+                            uj=self.data_matrix[nei,co_item])
                     except IndexError:
                         self.sim_mat[user][nei] = 0
                         
@@ -266,18 +379,28 @@ class CFwithKnn:
         
                 elif self.sim == 'os':
                     try:
-                        self.sim_mat[user][nei] = self.os(ui=self.data_matrix[user,co_item],
-                                                                 uj=self.data_matrix[nei,co_item])
+                        self.sim_mat[user][nei] = self.os(
+                            ui=self.data_matrix[user,co_item],
+                            uj=self.data_matrix[nei,co_item])
                     except IndexError:
                         self.sim_mat[user][nei] = 0
                         
                 elif self.sim == 'os_sig':
                     try:
-                        self.sim_mat[user][nei] = self.os_sig(ui=self.data_matrix[user,co_item],
-                                                    uj=self.data_matrix[nei,co_item])
+                        self.sim_mat[user][nei] = self.os_sig(
+                            ui=self.data_matrix[user,co_item],
+                            uj=self.data_matrix[nei,co_item])
                     except IndexError:
                         self.sim_mat[user][nei] = 0
-        
+                        
+                elif self.sim == 'os_new_rating':
+                    try:
+                        self.sim_mat[user][nei] = self.os_new_rating(
+                            ui=self.data_matrix[user,co_item],
+                            uj=self.data_matrix[nei,co_item])
+                    except IndexError:
+                        self.sim_mat[user][nei] = 0
+   
         # 유사도 행렬 lower triangle 부분 채워넣기.
         users_r = users[::-1]
         n=1
@@ -298,7 +421,7 @@ class CFwithKnn:
         print('========================== similarity:{}  k:{}========================='.format(self.sim, self.k))
         users = list(self.test_d.keys())
         error = []
-        self.pred_check = []
+
         for user in tqdm(users):
             # k-neighbor
             k_neighbor_sim = sorted(self.sim_mat[user,:], reverse=True)[:self.k]
@@ -324,15 +447,14 @@ class CFwithKnn:
                     prediction.append(self.data_mean[user])
                 real.append(no_rate_r)
             
-            self.pred_check.append(prediction)    
             e = [abs(i-j) for i,j in zip(prediction, real)]
             error.extend(e)
         
         mae = sum(error)/len(error)
         return mae
 
-    
-    def run(self):
+    # 실험1
+    def run1(self):
         
         cv_result = []
         
@@ -346,26 +468,61 @@ class CFwithKnn:
         
         return np.mean(cv_result)
     
+    # 실험2
+    def run2(self):
+        
+        cv_result = []
+        
+        for i in range(self.CV):
+            
+            self.train_test_split()
+            self.make_matrix()
+            self.similarity_calculation()
+            cv_result.append(self.predict())
+        
+        return np.mean(cv_result)
 
 #%% experiment
 
 CV=5
 
-result_pcc_msd = {}
-for sim in ['pcc','msd']:
-    result_pcc_msd[sim]={}
+result = {}
+for sim in ['cos','pcc','msd','os_new_rating']:
+    result[sim]={}
     for k in list(range(10,101,10)):
-        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim)
-        result_pcc_msd[sim][k]=cf.run()
+        cf = CFwithKnn(data=data_1m, data_d=data_1m_d, k=k, CV=CV, sim=sim, new=0)
+        result[sim][k]=cf.run2()
+
+
+result_new1 = {}
+for sim in ['cos','pcc','msd','os_new_rating']:
+    result_new1[sim]={}
+    for k in list(range(10,101,10)):
+        cf = CFwithKnn(data=data_1m, data_d=data_1m_d, k=k, CV=CV, sim=sim, new=1)
+        result_new1[sim][k]=cf.run2()
+
+result_new1_2 = {}
+for sim in ['cos','pcc','msd','os_new_rating']:
+    result_new1_2[sim]={}
+    for k in list(range(10,101,10)):
+        cf = CFwithKnn(data=data_1m, data_d=data_1m_d, k=k, CV=CV, sim=sim, new=1.2)
+        result_new1_2[sim][k]=cf.run2()
+
+result_new1_3 = {}
+for sim in ['cos','pcc','msd','os_new_rating']:
+    result_new1_3[sim]={}
+    for k in list(range(10,101,10)):
+        cf = CFwithKnn(data=data_1m, data_d=data_1m_d, k=k, CV=CV, sim=sim, new=1.3)
+        result_new1_3[sim][k]=cf.run2()
 
 
 # save result
-with open('result/result_{}_pcc_msd.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
-    pickle.dump(result_pcc_msd, f)
+with open('result/result_{}_experiment2_new_rating2_3.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
+    pickle.dump(result_new2_3, f)
 
 # load result
-with open('result/result_2020-12-22 14시53분_traditional.pickle', 'rb') as f:
-    result = pickle.load(f)
+with open('result/result_2020-12-22 15시06분_cos_1m.pickle', 'rb') as f:
+    result_cos = pickle.load(f)
 
 
 

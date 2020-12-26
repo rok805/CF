@@ -671,8 +671,8 @@ st1, st_agg1 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','m
 st1_1, st_agg1_1 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=1.5)
 st2, st_agg2 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=2)
 st3, st_agg3 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=3)
-st4, st_agg4 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=4)
-st5, st_agg5 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=5)
+st2_1, st_agg2_1 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=4)
+st3_1, st_agg3_1 = experiment(data=rd, test_ratio=0.2, cv=5, measure=['cos','pcc','msd','os_new_rating','os_new_rating_2times'], k=list(range(10,101,10)), soso=3, new=5)
 
 # 실험 2. 1M data set
 # 기존 유사도 성능.
@@ -723,8 +723,8 @@ plt.xlabel('k neighbors')
 
 
 # save result
-with open('result/result_{}_cos_jac.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
-    pickle.dump(cj_agg, f)
+with open('result/result_{}_pcc_1M.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
+    pickle.dump(st_agg_pcc, f)
 
 # load result
 with open('result/result_rating3_2020-12-13 21시35분.pickle', 'rb') as f:
