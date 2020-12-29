@@ -26,10 +26,10 @@ from similarity_measure import sigmoid_mapping
 # 데이터 로드하기.
 
 data = data_load.create_rating()
-data_1m = data_load.create_rating_1M()
+# data_1m = data_load.create_rating_1M()
 
 data_d = data_load.create_rating_dic()
-data_1m_d = data_load.create_rating_dic_1M()
+# data_1m_d = data_load.create_rating_dic_1M()
 
 ##############################################################################
 
@@ -220,6 +220,51 @@ class CFwithKnn:
             self.sigmoid_dic[i] = 1 / (1 + np.exp(-i + self.mid))
 
 
+    # 실험 2를 위한 rating mapping.
+    
+    def new_rating(self, rating):
+        
+        if len(rating) == 0:
+            return rating
+        
+        elif self.new == 0:
+            return rating
+        
+        elif self.new == 1:
+            u_mean = np.mean(rating)
+            rating_prime = (rating - u_mean) / u_mean
+            return rating_prime
+        elif self.new == 1.2:
+            u_mean = np.mean(rating)
+            rating_prime = (1 / (1 + np.exp(-(rating - u_mean) / u_mean)) - 0.5).round(5)
+            return rating_prime
+        elif self.new == 1.3:
+            u_mean = np.mean(rating)
+            u_std = np.std(rating)
+            rating_prime = (1 / (1 + np.exp(-(rating - u_mean) / u_mean)) - 0.5).round(5) / (1 + u_std**2)
+            return rating_prime
+            
+            
+        elif self.new == 2:
+            u_mean = np.mean(rating)
+            rating_prime = (rating - u_mean)
+            return rating_prime
+            
+        elif self.new == 2.2:
+            u_mean = np.mean(rating)
+            rating_prime = (1 / (1 + np.exp(-rating + u_mean)) - 0.5).round(5)
+            return rating_prime
+            
+        elif self.new == 2.3:
+            u_mean = np.mean(rating)
+            u_std = np.std(rating)
+            rating_prime = (1 / (1 + np.exp(-rating + u_mean)) - 0.5).round(5) / (1 + u_std**2)
+            return rating_prime
+            
+        
+        
+        
+
 ##############################################################################
 
     
@@ -335,39 +380,39 @@ class CFwithKnn:
             n+=1
             for nei in neighbor:
                 co_item = np.array(list(set(self.train_d[user].keys()).intersection(set(self.train_d[nei].keys()))))
-        
-                if self.sim == 'cos':
+                
+                if len(co_item) == 0: # no co_item, similarity is zero.
+                    self.sim_mat[user][nei] = 0
+                    
+                elif self.sim == 'cos':
+                    ui_ = self.new_rating(self.data_matrix[user,co_item])
+                    uj_ = self.new_rating(self.data_matrix[nei,co_item])
                     try:
-                        self.sim_mat[user][nei] = self.cosine(ui=self.data_matrix[user,co_item],
-                                                    uj=self.data_matrix[nei,co_item])
+                        self.sim_mat[user][nei] = self.cosine(ui=ui_, uj=uj_)
                     except IndexError:
                         self.sim_mat[user][nei] = 0
         
-                elif (self.sim == 'pcc') and (self.new == 0):
+                elif self.sim == 'pcc':
+                    ui_ = self.new_rating(self.data_matrix[user,co_item])
+                    uj_ = self.new_rating(self.data_matrix[nei,co_item])
+                    mi_ = self.new_rating(np.arrray(list(self.train_d[user].values())))
+                    mj_ = self.new_rating(np.arrray(list(self.train_d[nei].values())))
                     try:
                         self.sim_mat[user][nei] = self.pearson_correlation(
-                            ui=self.data_matrix[user,co_item],
-                            uj=self.data_matrix[nei,co_item],
-                            mi=self.data_mean[user],
-                            mj=self.data_mean[nei])
+                            ui=ui_,
+                            uj=uj_,
+                            mi=np.mean(mi_),
+                            mj=np.mean(mj_))
                     except IndexError:
                         self.sim_mat[user][nei] = 0
                         
-                elif (self.sim == 'pcc') and (self.new != 0):
-                    try:
-                        self.sim_mat[user][nei] = self.pearson_correlation(
-                            ui=self.data_matrix[user,co_item],
-                            uj=self.data_matrix[nei,co_item],
-                            mi=np.mean(list(self.new_data_d[user].values())),
-                            mj=np.mean(list(self.new_data_d[nei].values())))
-                    except IndexError:
-                        self.sim_mat[user][nei] = 0                        
-                
                 elif self.sim == 'msd':
+                    ui_ = self.new_rating(self.data_matrix[user,co_item])
+                    uj_ = self.new_rating(self.data_matrix[nei,co_item])
                     try:
                         self.sim_mat[user][nei] = self.mean_squared_difference(
-                            ui=self.data_matrix[user,co_item],
-                            uj=self.data_matrix[nei,co_item])
+                            ui=ui_,
+                            uj=uj_)
                     except IndexError:
                         self.sim_mat[user][nei] = 0
                         
@@ -378,26 +423,32 @@ class CFwithKnn:
                         self.sim_mat[user][nei] = 0
         
                 elif self.sim == 'os':
+                    ui_ = self.new_rating(self.data_matrix[user,co_item])
+                    uj_ = self.new_rating(self.data_matrix[nei,co_item])
                     try:
                         self.sim_mat[user][nei] = self.os(
-                            ui=self.data_matrix[user,co_item],
-                            uj=self.data_matrix[nei,co_item])
+                            ui=ui_,
+                            uj=uj_)
                     except IndexError:
                         self.sim_mat[user][nei] = 0
                         
                 elif self.sim == 'os_sig':
+                    ui_ = self.new_rating(self.data_matrix[user,co_item])
+                    uj_ = self.new_rating(self.data_matrix[nei,co_item])
                     try:
                         self.sim_mat[user][nei] = self.os_sig(
-                            ui=self.data_matrix[user,co_item],
-                            uj=self.data_matrix[nei,co_item])
+                            ui=ui_,
+                            uj=uj_)
                     except IndexError:
                         self.sim_mat[user][nei] = 0
                         
                 elif self.sim == 'os_new_rating':
+                    ui_ = self.new_rating(self.data_matrix[user,co_item])
+                    uj_ = self.new_rating(self.data_matrix[nei,co_item])
                     try:
                         self.sim_mat[user][nei] = self.os_new_rating(
-                            ui=self.data_matrix[user,co_item],
-                            uj=self.data_matrix[nei,co_item])
+                            ui=ui_,
+                            uj=uj_)
                     except IndexError:
                         self.sim_mat[user][nei] = 0
    
@@ -437,11 +488,13 @@ class CFwithKnn:
                         up.append(nei_sim*(self.train_d[nei_id][no_rate_i]-self.data_mean[nei_id]))
                         down.append(nei_sim)
                 try:
-                    weight = sum(up)/sum(down)
+                    weight = round(sum(up), 5)/round(sum(down), 5)
                 except:
                     weight = 0
                 pred = self.data_mean[user] + weight
-                if not math.isnan(pred):
+                if math.isinf(pred):
+                    print('여기 inf 있어요.')
+                if not math.isnan(pred) and not math.isinf(pred):
                     prediction.append(pred)
                 else:
                     prediction.append(self.data_mean[user])
@@ -485,35 +538,59 @@ class CFwithKnn:
 #%% experiment
 
 CV=5
-
-result = {}
-for sim in ['cos','pcc','msd','os_new_rating']:
-    result[sim]={}
+rr = {}
+for sim in ['cos', 'pcc', 'msd', 'os']:
+    rr[sim]={}
     for k in list(range(10,101,10)):
-        cf = CFwithKnn(data=data_1m, data_d=data_1m_d, k=k, CV=CV, sim=sim, new=0)
-        result[sim][k]=cf.run2()
+        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=0)
+        for i in range(5):
+            rr[sim][k]=cf.run2()
 
-
-result_new1 = {}
-for sim in ['cos','pcc','msd','os_new_rating']:
-    result_new1[sim]={}
+rr1 = {}
+for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
+    rr1[sim]={}
     for k in list(range(10,101,10)):
-        cf = CFwithKnn(data=data_1m, data_d=data_1m_d, k=k, CV=CV, sim=sim, new=1)
-        result_new1[sim][k]=cf.run2()
-
-result_new1_2 = {}
-for sim in ['cos','pcc','msd','os_new_rating']:
-    result_new1_2[sim]={}
+        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=1)
+        for i in range(5):
+            rr1[sim][k]=cf.run2()
+rr1_2 = {}
+for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
+    rr1_2[sim]={}
     for k in list(range(10,101,10)):
-        cf = CFwithKnn(data=data_1m, data_d=data_1m_d, k=k, CV=CV, sim=sim, new=1.2)
-        result_new1_2[sim][k]=cf.run2()
-
-result_new1_3 = {}
-for sim in ['cos','pcc','msd','os_new_rating']:
-    result_new1_3[sim]={}
+        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=1.2)
+        for i in range(5):
+            rr1_2[sim][k]=cf.run2()
+rr1_3 = {}
+for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
+    rr1_3[sim]={}
     for k in list(range(10,101,10)):
-        cf = CFwithKnn(data=data_1m, data_d=data_1m_d, k=k, CV=CV, sim=sim, new=1.3)
-        result_new1_3[sim][k]=cf.run2()
+        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=1.3)
+        for i in range(5):
+            rr1_3[sim][k]=cf.run2()
+
+rr2 = {}
+for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
+    rr2[sim]={}
+    for k in list(range(10,101,10)):
+        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=2)
+        for i in range(5):
+            rr2[sim][k]=cf.run2()
+
+rr2_2 = {}
+for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
+    rr2_2[sim]={}
+    for k in list(range(10,101,10)):
+        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=2.2)
+        for i in range(5):
+            rr2_2[sim][k]=cf.run2()
+
+rr2_3 = {}
+for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
+    rr2_3[sim]={}
+    for k in list(range(10,101,10)):
+        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=2.3)
+        for i in range(5):
+            rr2_3[sim][k]=cf.run2()
 
 
 # save result
