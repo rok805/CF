@@ -102,7 +102,7 @@ class CFwithKnn:
         for i in self.train_d:
             self.data_mean[i] = np.mean(list(self.train_d[i].values()))
 
-        # new rating setting.
+        # find max rating in new ratings.
         if self.new != 0:
 
             if self.new == 1:
@@ -159,6 +159,16 @@ class CFwithKnn:
                 basket=set()
                 self.new_data_d = copy.deepcopy(self.train_d)
                 self.new_data_d = sigmoid_mapping.new_rating_mean_2_3(self.new_data_d)  # new rating method
+        
+                for i in self.new_data_d:
+                    for j in self.new_data_d[i]:
+                        basket.add(self.new_data_d[i][j])
+                self.max_r_new = max(basket)
+                
+            elif self.new == 3:
+                basket=set()
+                self.new_data_d = copy.deepcopy(self.train_d)
+                self.new_data_d = sigmoid_mapping.new_rating_3(self.new_data_d)  # new rating method
         
                 for i in self.new_data_d:
                     for j in self.new_data_d[i]:
@@ -259,6 +269,11 @@ class CFwithKnn:
             u_mean = np.mean(rating)
             u_std = np.std(rating)
             rating_prime = (1 / (1 + np.exp(-rating + u_mean)) - 0.5).round(5) / (1 + u_std**2)
+            return rating_prime
+        
+        
+        elif self.new == 3:
+            rating_prime = 1 / (1 + np.exp(-rating + 3)).round(5)
             return rating_prime
             
         
@@ -395,8 +410,8 @@ class CFwithKnn:
                 elif self.sim == 'pcc':
                     ui_ = self.new_rating(self.data_matrix[user,co_item])
                     uj_ = self.new_rating(self.data_matrix[nei,co_item])
-                    mi_ = self.new_rating(np.arrray(list(self.train_d[user].values())))
-                    mj_ = self.new_rating(np.arrray(list(self.train_d[nei].values())))
+                    mi_ = self.new_rating(np.array(list(self.train_d[user].values())))
+                    mj_ = self.new_rating(np.array(list(self.train_d[nei].values())))
                     try:
                         self.sim_mat[user][nei] = self.pearson_correlation(
                             ui=ui_,
@@ -492,8 +507,7 @@ class CFwithKnn:
                 except:
                     weight = 0
                 pred = self.data_mean[user] + weight
-                if math.isinf(pred):
-                    print('여기 inf 있어요.')
+
                 if not math.isnan(pred) and not math.isinf(pred):
                     prediction.append(pred)
                 else:
@@ -538,64 +552,77 @@ class CFwithKnn:
 #%% experiment
 
 CV=5
+rr_3_c = {}
+for sim in ['cos']:
+    rr_3_c[sim]={}
+    for k in list(range(10,101,10)):
+        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=3)
+        rr_3_c[sim][k]=cf.run2()
+rr_3_p = {}
+for sim in ['pcc']:
+    rr_3_p[sim]={}
+    for k in list(range(10,101,10)):
+        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=3)
+        rr_3_p[sim][k]=cf.run2()
+rr_3_m = {}
+for sim in ['msd']:
+    rr_3_m[sim]={}
+    for k in list(range(10,101,10)):
+        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=3)
+        rr_3_m[sim][k]=cf.run2()
+
+
 rr = {}
 for sim in ['cos', 'pcc', 'msd', 'os']:
     rr[sim]={}
     for k in list(range(10,101,10)):
         cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=0)
-        for i in range(5):
-            rr[sim][k]=cf.run2()
+        rr[sim][k]=cf.run2()
 
 rr1 = {}
 for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
     rr1[sim]={}
     for k in list(range(10,101,10)):
         cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=1)
-        for i in range(5):
-            rr1[sim][k]=cf.run2()
+        rr1[sim][k]=cf.run2()
 rr1_2 = {}
 for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
     rr1_2[sim]={}
     for k in list(range(10,101,10)):
         cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=1.2)
-        for i in range(5):
-            rr1_2[sim][k]=cf.run2()
+        rr1_2[sim][k]=cf.run2()
 rr1_3 = {}
 for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
     rr1_3[sim]={}
     for k in list(range(10,101,10)):
         cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=1.3)
-        for i in range(5):
-            rr1_3[sim][k]=cf.run2()
+        rr1_3[sim][k]=cf.run2()
 
 rr2 = {}
 for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
     rr2[sim]={}
     for k in list(range(10,101,10)):
         cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=2)
-        for i in range(5):
-            rr2[sim][k]=cf.run2()
+        rr2[sim][k]=cf.run2()
 
 rr2_2 = {}
 for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
     rr2_2[sim]={}
     for k in list(range(10,101,10)):
         cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=2.2)
-        for i in range(5):
-            rr2_2[sim][k]=cf.run2()
+        rr2_2[sim][k]=cf.run2()
 
 rr2_3 = {}
 for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
     rr2_3[sim]={}
     for k in list(range(10,101,10)):
         cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=2.3)
-        for i in range(5):
-            rr2_3[sim][k]=cf.run2()
+        rr2_3[sim][k]=cf.run2()
 
 
 # save result
-with open('result/result_{}_experiment2_new_rating2_3.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
-    pickle.dump(result_new2_3, f)
+with open('result/result_{}_experiment2_new3_msd.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
+    pickle.dump(rr_3_m, f)
 
 # load result
 with open('result/result_2020-12-22 15시06분_cos_1m.pickle', 'rb') as f:

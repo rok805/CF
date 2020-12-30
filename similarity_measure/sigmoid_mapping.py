@@ -189,6 +189,13 @@ def new_rating_mean_2_3(data):
     return data
 
 
+def new_rating_3(data):
+
+    for i in data:  # users
+        for item in data[i]:  # user i's items
+            data[i][item] = round(1 / (1 + np.exp(-data[i][item] + 3)), 5)
+
+    return data
 
 
 
