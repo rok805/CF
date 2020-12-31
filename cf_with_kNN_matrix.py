@@ -275,8 +275,14 @@ class CFwithKnn:
         elif self.new == 3:
             u_mean = np.mean(rating)
             u_std = np.std(rating)
-            rating_prime = (rating - u_mean) / u_std
-            return rating_prime
+            try:
+                rating_prime = (rating - u_mean) / u_std
+            except:
+                rating_prime = rating * 0
+            if not math.isinf(rating_prime) and not math.isnan(rating_prime):
+                return rating_prime
+            else:
+                return rating * 0
             
         
         
@@ -604,10 +610,10 @@ for sim in ['os_sig']:
 
 
 rr = {}
-for sim in ['cos', 'pcc', 'msd', 'os']:
+for sim in ['cos']:
     rr[sim]={}
-    for k in list(range(10,101,10)):
-        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=0)
+    for k in [10]:
+        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=3)
         rr[sim][k]=cf.run1()
 
 rr1 = {}

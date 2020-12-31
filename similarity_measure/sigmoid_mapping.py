@@ -192,9 +192,18 @@ def new_rating_mean_2_3(data):
 def new_rating_3(data):
 
     for i in data:  # users
+        m = np.mean(list(data[i].values()))  # user's mean
+        s = np.std(list(data[i].values()))  # user's std
+    
         for item in data[i]:  # user i's items
-            data[i][item] = round(1 / (1 + np.exp(-data[i][item] + 3)), 5)
-
+            try:    
+                data[i][item] = (data[i][item] - m) / s
+                if not math.isinf(data[i][item]) and not math.isnan(data[i][item]):
+                    continue
+                else:
+                    data[i][item] = 0
+            except:
+                data[i][item] = 0
     return data
 
 
