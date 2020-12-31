@@ -480,20 +480,24 @@ class CFwithKnn:
 
 ##############################################################################
     
-    # 예측 평점 만들기.
+
+
     def predict(self):
         print()
         print('========================== predict =================================')
         print('========================== similarity:{}  k:{}========================='.format(self.sim, self.k))
         users = list(self.test_d.keys())
-        error = []
+        error_mse = []
+        error_rmse = []
+        ndcg_basket = []
 
         for user in tqdm(users):
             # k-neighbor
             k_neighbor_sim = sorted(self.sim_mat[user,:], reverse=True)[:self.k]
             k_neighbor_id = np.argsort(self.sim_mat[user,:])[::-1][:self.k]
-            prediction=[]
-            real=[]
+            prediction = []
+            real = []
+            
             for no_rate_i, no_rate_r in self.test_d[user].items(): # 평점을 매기지 않은 아이템 중에서
                 up=[]
                 down=[]
@@ -515,10 +519,35 @@ class CFwithKnn:
                 real.append(no_rate_r)
             
             e = [abs(i-j) for i,j in zip(prediction, real)]
-            error.extend(e)
+            e_rmse = [(i-j)**2 for i,j in zip(prediction, real)]
+            error_mse.extend(e)
+            error_rmse.extend(e_rmse)
+            
+            # NDCG
+            
+            rel_t_p = [(i,j) for i,j in zip(real, prediction)]
+            ndcg_n = []
+            for p_ in list(range(5,51,5)):
+                p = min(len(prediction), p_) # 고려할 top p.
+                discount = 1 / (np.log2(np.arange(p) + 2))
+                rel_t_p2 = sorted(rel_t_p, key = lambda x: x[1], reverse = True)[:p]
+                rel_t = [i[0] for i in rel_t_p2][:p]
+                rel_p = [i[0] for i in rel_t_p2][:p]
+                
+                rel_true = np.sort(np.array(rel_t))[::-1]
+                rel_pred = np.array(rel_p)
+                idcg = np.sum(rel_true * discount)
+                dcg = np.sum(rel_pred * discount)
+                ndcg_n.append(dcg/idcg)
+                
+            ndcg_basket.append(ndcg_n)
+            
+            
+        mae = sum(error_mse)/len(error_mse)
+        rmse = math.sqrt(sum(error_rmse)/len(error_rmse))
+        NDCG = np.array(ndcg_basket).mean(axis=0)
         
-        mae = sum(error)/len(error)
-        return mae
+        return mae, rmse, NDCG
 
     # 실험1
     def run1(self):
@@ -533,7 +562,8 @@ class CFwithKnn:
             self.similarity_calculation()
             cv_result.append(self.predict())
         
-        return np.mean(cv_result)
+        # return np.mean(cv_result)
+        return cv_result
     
     # 실험2
     def run2(self):
@@ -547,29 +577,28 @@ class CFwithKnn:
             self.similarity_calculation()
             cv_result.append(self.predict())
         
-        return np.mean(cv_result)
+        # return np.mean(cv_result)
+        return cv_result
 
 #%% experiment
+CV=5
+result_os = {}
+for sim in ['os']:
+    result_os[sim]={}
+    for k in list(range(10,101,10)):
+        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=0)
+        result_os[sim][k]=cf.run1()
+
 
 CV=5
-rr_3_c = {}
-for sim in ['cos']:
-    rr_3_c[sim]={}
+result_os_sig = {}
+for sim in ['os_sig']:
+    result_os_sig[sim]={}
     for k in list(range(10,101,10)):
-        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=3)
-        rr_3_c[sim][k]=cf.run2()
-rr_3_p = {}
-for sim in ['pcc']:
-    rr_3_p[sim]={}
-    for k in list(range(10,101,10)):
-        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=3)
-        rr_3_p[sim][k]=cf.run2()
-rr_3_m = {}
-for sim in ['msd']:
-    rr_3_m[sim]={}
-    for k in list(range(10,101,10)):
-        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=3)
-        rr_3_m[sim][k]=cf.run2()
+        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=0)
+        result_os_sig[sim][k]=cf.run1()
+        
+
 
 
 rr = {}
@@ -577,47 +606,47 @@ for sim in ['cos', 'pcc', 'msd', 'os']:
     rr[sim]={}
     for k in list(range(10,101,10)):
         cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=0)
-        rr[sim][k]=cf.run2()
+        rr[sim][k]=cf.run1()
 
 rr1 = {}
 for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
     rr1[sim]={}
     for k in list(range(10,101,10)):
         cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=1)
-        rr1[sim][k]=cf.run2()
+        rr1[sim][k]=cf.run1()
 rr1_2 = {}
 for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
     rr1_2[sim]={}
     for k in list(range(10,101,10)):
         cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=1.2)
-        rr1_2[sim][k]=cf.run2()
+        rr1_2[sim][k]=cf.run1()
 rr1_3 = {}
 for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
     rr1_3[sim]={}
     for k in list(range(10,101,10)):
         cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=1.3)
-        rr1_3[sim][k]=cf.run2()
+        rr1_3[sim][k]=cf.run1()
 
 rr2 = {}
 for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
     rr2[sim]={}
     for k in list(range(10,101,10)):
         cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=2)
-        rr2[sim][k]=cf.run2()
+        rr2[sim][k]=cf.run1()
 
 rr2_2 = {}
 for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
     rr2_2[sim]={}
     for k in list(range(10,101,10)):
         cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=2.2)
-        rr2_2[sim][k]=cf.run2()
+        rr2_2[sim][k]=cf.run1()
 
 rr2_3 = {}
 for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
     rr2_3[sim]={}
     for k in list(range(10,101,10)):
         cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=2.3)
-        rr2_3[sim][k]=cf.run2()
+        rr2_3[sim][k]=cf.run1()
 
 
 # save result
