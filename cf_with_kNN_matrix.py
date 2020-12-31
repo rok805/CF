@@ -273,7 +273,9 @@ class CFwithKnn:
         
         
         elif self.new == 3:
-            rating_prime = 1 / (1 + np.exp(-rating + 3)).round(5)
+            u_mean = np.mean(rating)
+            u_std = np.std(rating)
+            rating_prime = (rating - u_mean) / u_std
             return rating_prime
             
         
@@ -505,7 +507,7 @@ class CFwithKnn:
                 for nei_sim, nei_id in zip(k_neighbor_sim, k_neighbor_id): # k 이웃들에 대해
                     if no_rate_i in self.train_d[nei_id].keys(): # 평점을 매겼으면 예측에 사용.
                         up.append(nei_sim*(self.train_d[nei_id][no_rate_i]-self.data_mean[nei_id]))
-                        down.append(nei_sim)
+                        down.append(abs(nei_sim))
                 try:
                     weight = round(sum(up), 5)/round(sum(down), 5)
                 except:
@@ -596,7 +598,7 @@ for sim in ['os_sig']:
     result_os_sig[sim]={}
     for k in list(range(10,101,10)):
         cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=0)
-        result_os_sig[sim][k]=cf.run1()
+        result_os_sig[sim][k]=cf.run1()s
         
 
 
@@ -650,8 +652,8 @@ for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
 
 
 # save result
-with open('result/result_{}_experiment2_new3_msd.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
-    pickle.dump(rr_3_m, f)
+with open('result/result_{}_experiment1_os_rmse_ndcg.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
+    pickle.dump(result, f)
 
 # load result
 with open('result/result_2020-12-22 15시06분_cos_1m.pickle', 'rb') as f:
