@@ -7,6 +7,7 @@ Created on Thu Nov 12 11:27:31 2020
 
 import numpy as np
 from collections import Counter
+import math
 
 # euclidean distance
 def euclidean_dist(a, b):
@@ -206,6 +207,23 @@ def new_rating_3(data):
                 data[i][item] = 0
     return data
 
+
+def new_rating_3_2(data):
+
+    for i in data:  # users
+        m = np.mean(list(data[i].values()))  # user's mean
+        s = np.std(list(data[i].values()))  # user's std
+    
+        for item in data[i]:  # user i's items
+            try:    
+                data[i][item] = (1 / (1 + np.exp(-((data[i][item] - m) / s)) - 0.5).round(5))
+                if not math.isinf(data[i][item]) and not math.isnan(data[i][item]):
+                    continue
+                else:
+                    data[i][item] = 0
+            except:
+                data[i][item] = 0
+    return data
 
 
 def sigmoid_mapping_d_pf(ratings_list, mid):

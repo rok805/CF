@@ -25,12 +25,14 @@ from similarity_measure import sigmoid_mapping
 
 # 데이터 로드하기.
 
-data = data_load.create_rating()
+# data = data_load.create_rating()
 # data_1m = data_load.create_rating_1M()
 
-data_d = data_load.create_rating_dic()
+# data_d = data_load.create_rating_dic()
 # data_1m_d = data_load.create_rating_dic_1M()
 
+netflix = data_load.create_rating_netflix()
+netflix_d = data_load.create_rating_dic_netflix()
 ##############################################################################
 
 class CFwithKnn:
@@ -175,6 +177,15 @@ class CFwithKnn:
                         basket.add(self.new_data_d[i][j])
                 self.max_r_new = max(basket)
 
+            elif self.new == 3.2:
+                basket=set()
+                self.new_data_d = copy.deepcopy(self.train_d)
+                self.new_data_d = sigmoid_mapping.new_rating_3_2(self.new_data_d)  # new rating method
+        
+                for i in self.new_data_d:
+                    for j in self.new_data_d[i]:
+                        basket.add(self.new_data_d[i][j])
+                self.max_r_new = max(basket)
 
             
 
@@ -279,15 +290,22 @@ class CFwithKnn:
                 rating_prime = (rating - u_mean) / u_std
             except:
                 rating_prime = rating * 0
-            if not math.isinf(rating_prime) and not math.isnan(rating_prime):
+            if np.sum(np.isinf(rating_prime)) + np.sum(np.isnan(rating_prime)) == 0:
                 return rating_prime
             else:
                 return rating * 0
-            
-        
-        
-        
-
+      
+        elif self.new == 3.2:
+            u_mean = np.mean(rating)
+            u_std = np.std(rating)
+            try:
+                rating_prime = (1 / (1 + np.exp(-((rating - u_mean) / u_std))) - 0.5).round(5)
+            except:
+                rating_prime = rating * 0
+            if np.sum(np.isinf(rating_prime)) + np.sum(np.isnan(rating_prime)) == 0:
+                return rating_prime
+            else:
+                return rating * 0
 ##############################################################################
 
     
@@ -330,7 +348,7 @@ class CFwithKnn:
         
         try:
             s = 1 - up/down
-            if not math.isnan(s):
+            if not math.isnan(s) and not math.isinf(s):
                 return s
             else:
                 return 0
@@ -590,31 +608,31 @@ class CFwithKnn:
 
 #%% experiment
 CV=5
-result_os = {}
+netflix_os = {}
 for sim in ['os']:
-    result_os[sim]={}
+    netflix_os[sim]={}
     for k in list(range(10,101,10)):
-        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=0)
-        result_os[sim][k]=cf.run1()
+        cf = CFwithKnn(data=netflix, data_d=netflix_d, k=k, CV=CV, sim=sim, new=0)
+        netflix_os[sim][k]=cf.run1()
 
 
 CV=5
-result_os_sig = {}
+netflix_os_sig = {}
 for sim in ['os_sig']:
-    result_os_sig[sim]={}
+    netflix_os_sig[sim]={}
     for k in list(range(10,101,10)):
-        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=0)
-        result_os_sig[sim][k]=cf.run1()s
+        cf = CFwithKnn(data=netflix, data_d=netflix_d, k=k, CV=CV, sim=sim, new=0)
+        netflix_os_sig[sim][k]=cf.run1()
         
+####
 
 
-
-rr = {}
-for sim in ['cos']:
-    rr[sim]={}
-    for k in [10]:
-        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=3)
-        rr[sim][k]=cf.run1()
+rr3_2 = {}
+for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
+    rr3_2[sim]={}
+    for k in list(range(10,101,10)):
+        cf = CFwithKnn(data=data, data_d=data_d, k=k, CV=CV, sim=sim, new=3.2)
+        rr3_2[sim][k]=cf.run1()
 
 rr1 = {}
 for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
@@ -658,8 +676,8 @@ for sim in ['cos', 'pcc', 'msd', 'os_new_rating']:
 
 
 # save result
-with open('result/result_{}_experiment1_os_rmse_ndcg.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
-    pickle.dump(result, f)
+with open('result/result_{}_experiment1_os_sig_1m.pickle'.format(str(datetime.datetime.now())[:13]+'시'+str(datetime.datetime.now())[14:16]+'분'), 'wb') as f:
+    pickle.dump(result_os_sig_1m, f)
 
 # load result
 with open('result/result_2020-12-22 15시06분_cos_1m.pickle', 'rb') as f:

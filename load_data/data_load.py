@@ -56,6 +56,35 @@ def create_rating_dic_1M():
         
     return rd
 
+##############################################################################
+
+def create_rating_netflix():
+
+    rating = pd.read_csv(r'C:\Users\user\Documents\CF\netflix\movie_ratings\ratings.csv')
+    rating.columns = ['userId','movieId','rating','timestamp']
+    idx1 = [i-1 for i in rating['userId']] # userId 를 0부터 시작하게 함.
+    idx2 = [i-1 for i in rating['movieId']] # movieId 를 0부터 시작하게 함.
+    rating['userId'] = idx1
+    rating['movieId'] = idx2
+
+    return rating
+
+
+
+# change user rating matrix to dictionary
+def create_rating_dic_netflix():
+
+    rating = create_rating_netflix()
+    rd = {}
+    users = set(rating['userId'])
+    for i in users: 
+        tmp = rating[rating['userId']==i]
+        rd[i] = {a:b for a,b in zip(tmp['movieId'],tmp['rating'])}
+
+    return rd
+
+
+##############################################################################
 
 # item genre data load
 def create_genre():
